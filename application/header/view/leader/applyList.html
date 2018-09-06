@@ -1,0 +1,91 @@
+﻿{include file='pub/header'/}
+<title>商品列表</title>
+</head>
+<body class="pos-r">
+<div>
+    <div class="page-container">
+        <div class="cl pd-5 bg-1 bk-gray mt-20">
+            <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
+               href="javascript:location.replace(location.href);" title="刷新">
+                <i class="Hui-iconfont">&#xe68f;</i>
+            </a>
+        </div>
+        <div class="mt-20">
+            <table class="table table-border table-bordered table-bg table-hover table-sort">
+                <thead>
+                <tr class="text-c">
+                    <th width="60">姓名</th>
+                    <th width="100">联系方式</th>
+                    <th width="100">地址</th>
+                    <th width="100">是否做过团长</th>
+                    <th width="100">其他备注</th>
+                    <th width="100">申请时间</th>
+                    <th width="100">是否已处理</th>
+                    <th width="100">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {foreach $list as $item}
+                <tr class="text-c va-m">
+                    <td>{$item.name}</td>
+                    <td>{$item.telephone}</td>
+                    <td>{$item.address}</td>
+                    <td>
+                        {if $item.is_group eq 1}
+                            是
+                        {else}
+                            否
+                        {/if}
+                    </td>
+                    <td>{$item.remarks}</td>
+                    <td>{$item.create_time}</td>
+                    <td>
+                        {if $item.status eq 1}
+                            已处理
+                        {else}
+                            未处理
+                        {/if}
+                    </td>
+                    <td class="td-manage">
+                        <a style="text-decoration:none" class="ml-5"
+                           onClick="solve('申请处理','{:url(\'Product/productEdit\', [\'goodid\'=>$item.id])}')"
+                           href="javascript:;">
+                            <i class="Hui-iconfont Hui-iconfont-edit"></i>确认通过
+                        </a>
+                        <a style="text-decoration:none" class="ml-5" onClick="refuse(this,'{$item.id}')"
+                           href="javascript:;" title="删除">
+                            <i class="Hui-iconfont Hui-iconfont-del"></i>拒绝
+                        </a>
+                    </td>
+                </tr>
+                {/foreach}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{include file='pub/footer'/}
+<script type="text/javascript">
+    $('.table-sort').dataTable({
+        "ordering": false,//是否开启排序
+        "bStateSave": true,//状态保存
+    });
+
+    /**
+     * 确认申请
+     */
+    function solve(){
+        
+    }
+
+    /**
+     * 拒绝申请
+     */
+    function refuse() {
+        
+    }
+
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+{include file="pub/header"}
+<title>添加目录</title>
+</head>
+<body>
+<article class="page-container">
+	<form action="" method="post" class="form form-horizontal" id="form-admin-edit">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>用户名：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" value="{$admin.uname}" placeholder="" id="adminName" name="uname">
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>管理员名称：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" value="{$admin.name}" placeholder="" id="name" name="name">
+            </div>
+        </div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>角色：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				{foreach $roleList as $key=>$role}
+				<input type="checkbox" class="input-small" id="role-{$key}" value="{$key}" placeholder="" name="role_id[]" {if in_array($key, $roleArr)}checked{/if}>
+				<label for="role-{$key}" class="">{$role}</label>
+				{/foreach}
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3">描述：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<textarea name="describe" cols="" rows="" class="textarea"  placeholder="说点什么...100个字符以内" dragonfly="true">{$admin.describe}</textarea>
+			</div>
+		</div>
+		<div class="row cl">
+			<div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-3">
+				<input type="hidden" id="adminId" value="{$admin.id}" name="id"/>
+				<input class="btn btn-primary radius" type="submit" value="&nbsp;&nbsp;提交&nbsp;&nbsp;">
+			</div>
+		</div>
+	</form>
+</article>
+
+{include file="pub/footer" /}
+
+<!--请在下方写此页面业务相关的脚本--> 
+<script type="text/javascript">
+    $(function(){
+        $("#form-admin-edit").validate({
+            rules:{
+                uname:{
+                    required:true,
+                    minlength:4,
+                    maxlength:10,
+                    remote:{
+                        url: '{:url("Admin/checkName")}',     //后台处理程序
+                        type: "post",               //数据发送方式
+                        dataType: "json",           //接受数据格式
+                        data: {                     //要传递的数据
+                            id: function(){
+                                return $("#adminId").val();
+                            }
+                        }
+                    }
+                },
+                "role_id[]":{
+                    required:true,
+                    minlength:1
+                }
+            },
+            messages:{
+                uname:{
+                    required: '用户名不能为空',
+                    minlength: '最少不能少于4位',
+                    maxlength: '最多不能多余10位',
+                    remote: '用户名已存在'
+                },
+                "role_id[]":{
+                    required:'角色必须选择',
+                    minlength:'至少选择一个角色'
+                }
+            },
+            submitHandler:function(form){
+                $(form).ajaxSubmit({
+                    type: 'post',
+                    url: "{:url('Admin/adminEdit')}" ,
+                    success: function(data){
+                        if(1 == data.code){
+                            var index = parent.layer.getFrameIndex(window.name);
+                            layer.msg(data.msg, {icon:6, time:1000});
+                            setTimeout(function(){
+                                parent.location.reload();
+                                parent.layer.close(index);
+                            }, 1000);
+                        }else{
+                            layer.msg(data.msg, {icon:6, time:1000});
+                        }
+                    },
+                    error: function(XmlHttpRequest, textStatus, errorThrown){
+                        layer.msg('error!',{icon:1,time:1000});
+                    }
+                });
+            }
+        });
+    });
+</script> 
+<!--/请在上方写此页面业务相关的脚本-->
+</body>
+</html>

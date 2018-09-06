@@ -1,0 +1,83 @@
+﻿{include file="pub/header"}
+</head>
+<body>
+<nav class="breadcrumb">{$breadNav} <a class="btn btn-success radius r btn-refresh" style="line-height:1.6em;margin-top:3px" href="javascript:location.replace(location.href);" title="刷新" ><i class="Hui-iconfont">&#xe68f;</i></a></nav>
+<div class="page-container">
+	<div class="cl pd-5 bg-1 bk-gray mt-20">
+		<span class="l">
+			<a href="javascript:;" onclick="role_add('添加角色','{:url("Role/roleAdd")}','','510')" class="btn btn-primary radius">
+				<i class="Hui-iconfont">&#xe600;</i> 添加角色
+			</a>
+		</span>
+	</div>
+	<div class="mt-20">
+	<table class="table table-border table-bordered table-hover table-bg table-sort">
+		<thead>
+			<tr class="text-c">
+				<th width="80">ID</th>
+				<th width="70">角色名称</th>
+				<th width="70">描述</th>
+				<th width="100">创建时间</th>
+				<th width="100">操作</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach name="roleList" item="role"}
+				<tr class="text-c">
+					<td>{$role.id}</td>
+					<td>{$role.role_name}</td>
+					<td>{$role.describe}</td>
+					<td>{$role.create_time}</td>
+					<td class="td-manage">
+						{if $role.id!=1}
+							<a title="编辑" href="javascript:;" onclick="role_edit('编辑','{:url("Role/roleEdit")}','{$role.id}','','510')" class="ml-5" style="text-decoration:none"><i class="Hui-iconfont">&#xe6df;</i>编辑</a>
+							<a title="删除" href="javascript:;" onclick="role_del(this,'{$role.id}')" class="ml-5" style="text-decoration:none"><i class="Hui-iconfont">&#xe6e2;</i>删除</a>
+						{/if}
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+	</div>
+</div>
+{include file="pub/footer" /}
+
+<!--请在下方写此页面业务相关的脚本-->
+<script type="text/javascript" src="__STATIC__/lib/My97DatePicker/4.8/WdatePicker.js"></script>
+<script type="text/javascript" src="__STATIC__/lib/laypage/1.2/laypage.js"></script>
+<script type="text/javascript">
+/*用户-添加*/
+function role_add(title,url,w,h){
+	layer_show(title,url,w,h);
+}
+
+/*用户-编辑*/
+function role_edit(title,url,id,w,h){
+	layer_show(title,url+"?roleId="+id,w,h);
+}
+/*用户-删除*/
+function role_del(obj,id){
+	layer.confirm('确认要删除吗？',function(index){
+		$.ajax({
+			type: 'POST',
+			url: '{:url("Role/roleDel")}',
+			data: {roleId:id},
+			dataType: 'json',
+			success: function(res){
+			    if(1 == res.code){
+                    location.reload();
+                    layer.msg('已删除!',{icon:1,time:1000});
+				}else{
+                    layer.msg('删除失败!',{icon:1,time:1000});
+				}
+
+			},
+			error:function(data) {
+				console.log(data.msg);
+			},
+		});		
+	});
+}
+</script> 
+</body>
+</html>

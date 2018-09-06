@@ -1,0 +1,132 @@
+{include file="pub/header"}
+<title>添加目录</title>
+</head>
+<body>
+<article class="page-container">
+	<form action="" method="post" class="form form-horizontal" id="form-menu-add">
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3">
+				<span class="c-red">*</span>目录等级：
+			</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<span class="select-box">
+					<select id="level" class="select" size="1" name="level">
+						<option value="" selected>请选择目录等级</option>
+						<option value="1">一级目录</option>
+						<option value="2">二级目录</option>
+						<option value="3">三级目录</option>
+					</select>
+				</span>
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3">
+				<span class="c-red">*</span>上级目录：
+			</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<span class="select-box">
+					<select id="parent_id" class="select" size="1" name="parent_id">
+						<option value="" selected>请选择上级目录</option>
+					</select>
+				</span>
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>目录名称：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<input type="text" class="input-text" value="" placeholder="" id="name" name="name">
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>访问路径：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<input type="text" class="input-text" value="" placeholder="" id="url" name="url">
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>是否显示：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<span class="select-box">
+					<select id="display" class="select" size="1" name="display">
+						<option value="1">显示</option>
+						<option value="0">不显示</option>
+					</select>
+				</span>
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3">描述：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<textarea name="describe" cols="" rows="" class="textarea"  placeholder="描述。。。"></textarea>
+			</div>
+		</div>
+		<div class="row cl">
+			<div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-3">
+				<input class="btn btn-primary radius" type="submit" value="&nbsp;&nbsp;提交&nbsp;&nbsp;">
+			</div>
+		</div>
+	</form>
+</article>
+
+{include file="pub/footer" /}
+
+<!--请在下方写此页面业务相关的脚本--> 
+<script type="text/javascript" src="__STATIC__/lib/My97DatePicker/4.8/WdatePicker.js"></script>
+<script type="text/javascript" src="__STATIC__/lib/jquery.validation/1.14.0/jquery.validate.js"></script>
+<script type="text/javascript" src="__STATIC__/lib/jquery.validation/1.14.0/validate-methods.js"></script>
+<script type="text/javascript" src="__STATIC__/lib/jquery.validation/1.14.0/messages_zh.js"></script>
+<script type="text/javascript">
+$(function(){
+	$("#form-menu-add").validate({
+		rules:{
+			level:{
+				required:true
+			},
+            parent_id:{
+                required:true
+            },
+            name:{
+                required:true
+            },
+            url:{
+                required:true
+            },
+			display:{
+				required:true
+			}
+		},
+		onkeyup:false,
+		focusCleanup:true,
+		success:"valid",
+		submitHandler:function(form){
+			$(form).ajaxSubmit(function(res){
+			    if(1 == res.code){
+                    var index = parent.layer.getFrameIndex(window.name);
+                    layer.msg(res.msg, {icon:6, time:1000});
+                    setTimeout(function(){
+                        parent.location.reload();
+                        parent.layer.close(index);
+                    }, 1000);
+                }else{
+			        layer.msg(res.msg, {icon: 5,time:1000});
+                }
+			});
+
+		}
+	});
+	//根据目录等级变化获取上级目录
+	$("#level").change(function(){
+		var level = $(this).val();
+		var opt = '';
+		$.post("{:url('Menu/getParentList')}", {level:level}, function(res){
+			$.each(res.data, function(i, v){
+				opt += '<option value="'+i+'">'+v+'</option>';
+			});
+            $("#parent_id").html(opt);
+        }, 'json');
+	});
+});
+</script> 
+<!--/请在上方写此页面业务相关的脚本-->
+</body>
+</html>

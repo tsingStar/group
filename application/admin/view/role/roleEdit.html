@@ -1,0 +1,141 @@
+{include file="pub/header"}
+<title>添加目录</title>
+</head>
+<body>
+<article class="page-container">
+	<form action="" method="post" class="form form-horizontal" id="form-role-edit">
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>角色名称：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<input type="text" class="input-text" value="{$role.role_name}" placeholder="" id="role_name" name="role_name">
+			</div>
+		</div>
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3">描述：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				<textarea name="describe" cols="" rows="" class="textarea"  placeholder="描述。。。">{$role.describe}</textarea>
+			</div>
+		</div>
+
+		<div class="row cl">
+			<label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>访问权限：</label>
+			<div class="formControls col-xs-8 col-sm-9">
+				{foreach $menuList as $key=>$val}
+				<dl class="permission-list">
+					<dt>
+						<label>
+							<input type="checkbox" value="" name="{$key}" {if in_array($val['id'], $accessNode)}checked{/if}>{$val['name']}
+						</label>
+					</dt>
+					<dd>
+						{foreach $val['children'] as $childkey=>$childval}
+						<dl class="cl permission-list2 permission-list">
+							<dt>
+								<label class="">
+									<input type="checkbox" value="" name="{$childkey}" {if in_array($childval['id'], $accessNode)}checked{/if}>{$childval['name']}
+								</label>
+							</dt>
+							<dd>
+								{foreach $childval['children'] as $nodekey=>$nodeval}
+								<label class="">
+									<input type="checkbox" value="{$val['id']},{$childval['id']},{$nodeval['id']}" name="node_id[]" {if in_array($nodeval['id'], $accessNode)}checked{/if}>{$nodeval['name']}
+								</label>
+								{/foreach}
+							</dd>
+						</dl>
+						{/foreach}
+					</dd>
+				</dl>
+				{/foreach}
+			</div>
+		</div>
+
+		<div class="row cl">
+			<div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-3">
+				<input type="hidden" name="id" id="roleId" value="{$role.id}"/>
+				<input class="btn btn-primary radius" type="submit" value="&nbsp;&nbsp;提交&nbsp;&nbsp;">
+			</div>
+		</div>
+	</form>
+</article>
+
+{include file="pub/footer" /}
+<!--请在下方写此页面业务相关的脚本-->
+<script type="text/javascript">
+$(function(){
+
+    $(".permission-list dt input:checkbox").click(function(){
+        $(this).closest("dl").find("dd input:checkbox").prop("checked",$(this).prop("checked"));
+    });
+    $(".permission-list2 dd input:checkbox").click(function(){
+        var l =$(this).parent().parent().find("input:checked").length;
+        var l2=$(this).parents(".permission-list").find(".permission-list2 dd").find("input:checked").length;
+        if($(this).prop("checked")){
+            $(this).closest("dl").find("dt input:checkbox").prop("checked",true);
+            $(this).parents(".permission-list").find("dt").first().find("input:checkbox").prop("checked",true);
+        }
+        else{
+            if(l==0){
+                $(this).closest("dl").find("dt input:checkbox").prop("checked",false);
+            }
+            if(l2==0){
+                $(this).parents(".permission-list").find("dt").first().find("input:checkbox").prop("checked",false);
+            }
+        }
+    });
+
+
+	$("#form-role-edit").validate({
+		rules:{
+			role_name:{
+				required:true,
+				remote:{
+                    url: "{:url('Role/checkRoleName')}",     //后台处理程序
+                    type: "post",               //数据发送方式
+                    dataType: "json",           //接受数据格式
+                    data: {                     //要传递的数据
+						roleId: function(){
+                            return $("#roleId").val();
+						}
+                    }
+				}
+			},
+			'node_id[]':{
+			    required:true,
+				minlength:1
+			}
+		},
+		messages:{
+		  role_name:{
+		      required:'角色名称不能为空',
+			  remote:'角色名称已存在'
+		  },
+		  'node_id[]':{
+              required:'可访问节点不能为空',
+              minlength:'可访问节点至少需要一个'
+		  }
+		},
+		onkeyup:false,
+		focusCleanup:true,
+		success:"valid",
+		submitHandler:function(form){
+			$(form).ajaxSubmit(function(res){
+			    if(1 == res.code){
+                    var index = parent.layer.getFrameIndex(window.name);
+                    layer.msg(res.msg, {icon:6, time:1000});
+                    setTimeout(function(){
+                        parent.location.reload();
+                        parent.layer.close(index);
+                    }, 1000);
+                }else{
+			        layer.msg(res.msg, {icon: 5,time:1000});
+                }
+			});
+
+		}
+	});
+});
+</script> 
+<!--/请在上方写此页面业务相关的脚本-->
+</body>
+</html>

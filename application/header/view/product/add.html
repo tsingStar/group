@@ -1,0 +1,121 @@
+{include file='pub/header'/}
+<title>新增商品</title>
+<link href="__STATIC__/lib/webuploader/0.1.5/webuploader.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<div class="page-container">
+    <form class="form form-horizontal" id="form-product-add" enctype="multipart/form-data" method="post">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>商品名称：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" value="" placeholder="" name="product_name" required>
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">商品展示图：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <table class="table table-border table-bordered pro_swiper">
+                    <tr class="text-c">
+                        <td>展示类型</td>
+                        <td>展示内容</td>
+                        <td>
+                            <button class="btn btn-primary radius" type="button" onclick="addSwiper()"
+                                    ondblclick="addSwiper()">添加
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">商品描述：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <textarea class="textarea" name="desc" cols="30" rows="10"></textarea>
+            </div>
+        </div>
+
+
+        <div class="row cl">
+            <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-2">
+                <button class="btn btn-secondary radius" type="submit"><i class="Hui-iconfont">&#xe632;</i> 保存商品
+                </button>
+                <button onClick="layer_close();" class="btn btn-default radius" type="button">
+                    &nbsp;&nbsp;取消&nbsp;&nbsp;
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+</body>
+{include file="pub/footer"/}
+<script type="text/javascript" src="__STATIC__/lib/webuploader/0.1.5/webuploader.min.js"></script>
+<script>
+    // 商品展示处理js
+    function addSwiper() {
+        let _html = '<tr class="text-c">\n' +
+            '                        <td>\n' +
+            '                            <select name="swiper_type[]" class="select-box" onchange="changeSwiper(this)">\n' +
+            '                                <option value="1">图片</option>\n' +
+            '                                <option value="2">视频</option>\n' +
+            '                            </select>\n' +
+            '                        </td>\n' +
+            '                        <td>\n' +
+            // '                            <input type="file" name="swiper[]" title="选择图片" accept="image/*">\n' +
+            '                            <span class="btn-upload form-group">\n' +
+            '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
+            '                  <input type="file" accept="image/*" name="swiper[]" class="input-file">\n' +
+            '                </span>\n' +
+            '                        </td>\n' +
+            '                        <td>\n' +
+            '                            <button class="btn btn-primary radius" onclick="delTd(this)">删除</button>\n' +
+            '                        </td>\n' +
+            '                    </tr>';
+        $(".pro_swiper").append(_html);
+    }
+
+    function changeSwiper(o) {
+        let type = $(o).val();
+        let _input;
+        if (type == 1) {
+            // _input = '<input type="file" name="swiper[]" title="选择图片" accept="image/*">';
+            _input = '<span class="btn-upload form-group">\n' +
+                '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
+                '                  <input type="file" name="swiper[]" class="input-file" accept="image/*">\n' +
+                '                </span>';
+        } else {
+            _input = '<span class="btn-upload form-group">\n' +
+                '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
+                '                  <input type="file" name="swiper[]" class="input-file" accept="video/mp4">\n' +
+                '                </span>';
+            // _input = '<input type="file" name="swiper[]" title="选择视频" accept="video/mp4">';
+        }
+        $(o).parent().next('td').html(_input);
+    }
+
+    function delTd(o) {
+        $(o).parent().parent().remove();
+    }
+</script>
+
+
+<script type="text/javascript">
+    $(function () {
+        $("#form-product-add").validate({
+            onkeyup: false,
+            focusCleanup: true,
+            success: "valid",
+            submitHandler: function (form) {
+                $(form).ajaxSubmit(function (res) {
+                    if (res.code == 1) {
+                        location.reload();
+                    } else {
+                        layer.msg(res.msg);
+                    }
+                })
+            }
+        });
+    });
+
+</script>
+</html>

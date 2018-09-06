@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+    <title>加盟易贝通</title>
+    <style>
+        .mesefillinfo {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        img {
+            width: 100%;
+        }
+
+        html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, address, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strong, sub, sup, var, b, u, i, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font: inherit;
+            vertical-align: baseline;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+
+        .mesefillinfo ul li {
+            line-height: 40px;
+            margin: 10px 2.7777% 0 2.7777%;
+            padding: 7px 2.7777%;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+
+        body, ul, li, h1, h2, h3, h4, h5, h6, p, a, img, input, i, b, * {
+            margin: 0px;
+            padding: 0px;
+            text-decoration: none;
+            list-style: none;
+            border: 0px;
+            font-size: 100%;
+            color: #666;
+            font-family: '微软雅黑';
+        }
+
+        .mesefillinfo ul li span, .mesefillinfo ul li input {
+            font-size: 13px;
+            color: #040000;
+        }
+
+        .mesefillinfo ul li input {
+            width: 70%;
+        }
+
+        .mesefillinfo ul li span, .mesefillinfo ul li input {
+            font-size: 13px;
+            color: #040000;
+        }
+
+        .mesedete {
+            padding: 8px 2.7777%;
+            margin-top: 68px;
+            background-color: #fff;
+            overflow: hidden;
+        }
+
+        .mesedete input {
+            width: 100%;
+            height: 35px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #fff;
+            background-color: #A2CB34;
+        }
+
+        button, html input[type="button"], input[type="reset"], input[type="submit"] {
+            -webkit-appearance: button;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body leftmargin="0" topmargin="0" style="background-color: #F0F0F0;">
+<img src="/upload/images/jiamengwx_1.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_2.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_3.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_4.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_5.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_6.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_7.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_8.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_9.png" onerror='javascript:this.style.display="none"'>
+<img src="/upload/images/jiamengwx_10.png" onerror='javascript:this.style.display="none"'>
+<form id="join" method="post" enctype="multipart/form-data">
+    <div class="mesefillinfo">
+        <ul>
+            <li><span>欢迎咨询，共创财富</span></li>
+            <li><span>联 系 人：</span><input type="text" class="cname" name="name" value="" placeholder="请输入联系人姓名"></li>
+            <li><span>联系电话：</span><input type="text" class="cphone" value="" required="required" name="telephone" placeholder="请输入联系电话">
+            </li>
+            <li><span>邮 &nbsp; &nbsp;箱：</span><input type="text" class="cemail" name="email" value=""
+                                                     placeholder="请输入邮箱"></li>
+            <li><span>所在区域：</span><input type="text" class="carea" value="" name="area" placeholder="请输入想加盟区域"></li>
+        </ul>
+    </div>
+    <div class="mesedete" style="margin-top:20px; margin-bottom:20px;"><input type="submit" id="submit" value="提交信息">
+    </div>
+    <input type="hidden" name="token" value="{$token}">
+</form>
+</body>
+<script type="text/javascript" src="__STATIC__/lib/jquery/1.9.1/jquery.min.js"></script>
+</html>

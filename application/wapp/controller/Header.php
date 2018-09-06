@@ -10,6 +10,10 @@
 namespace app\wapp\controller;
 
 
+use app\common\model\ApplyLeaderRecord;
+use app\common\model\HeaderGroup;
+use app\common\model\HeaderGroupProduct;
+use app\common\model\HeaderGroupProductSwiper;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -52,14 +56,19 @@ class Header extends Controller
         model('HeaderGroupProduct')->startTrans();
         model('HeaderGroupProductSwiper')->startTrans();
         try {
-            $res1 = model('HeaderGroup')->save($data);
+            $group_id = input('group_id');
+            if ($group_id > 0) {
+                $res1 = HeaderGroup::get($group_id)->save($data);
+            } else {
+                $res1 = model('HeaderGroup')->save($data);
+                $group_id = model('HeaderGroup')->getLastInsID();
+            }
             if (!$res1) {
                 throw new Exception('创建团购失败');
             }
-            $group_id = model('HeaderGroup')->getLastInsID();
             //团购商品信息
             $product_list = input('product_list/a');
-            foreach ($product_list as $item) {
+            foreach ($product_list as $key=>$item) {
 //            $item = json_decode($item, true);
                 $base_id = $item['base_id'];
                 if (!$base_id) {
@@ -93,14 +102,23 @@ class Header extends Controller
                     'group_price' => $item['group_price'],
                     'group_limit' => $item['group_limit'],
                     'self_limit' => $item['self_limit'],
-                    'ord' => $item['ord'],
+                    'ord' => $key,
                     'product_desc' => $item['product_desc'],
                 ];
-                $res2 = model('HeaderGroupProduct')->data($product_data)->isUpdate(false)->save();
+                if ($item['id']) {
+                    $res2 = HeaderGroupProduct::get($item['id'])->save($product_data);
+                } else {
+                    $res2 = model('HeaderGroupProduct')->data($product_data)->isUpdate(false)->save();
+                }
                 if (!$res2) {
                     throw new Exception('商品添加失败');
                 }
-                $product_id = model('HeaderGroupProduct')->getLastInsID();
+                if ($item['id']) {
+                    $product_id = $item['id'];
+                    HeaderGroupProductSwiper::destroy(['header_group_product_id' => $product_id]);
+                } else {
+                    $product_id = model('HeaderGroupProduct')->getLastInsID();
+                }
                 $product_swiper = $item['swiper_list'];
                 $swiper = [];
                 foreach ($product_swiper as $value) {
@@ -125,6 +143,22 @@ class Header extends Controller
             model('HeaderGroupProductSwiper')->rollback();
             exit_json(-1, $e->getMessage());
         }
+    }
+
+    /**
+     * 编辑团购获取详情
+     */
+    public function editGroupGetDetail()
+    {
+        $group_id = input('group_id');
+        $group = HeaderGroup::get($group_id);
+        $group['product_list'] = HeaderGroupProduct::all(function ($query) use ($group_id) {
+            $query->where(['header_group_id' => $group_id])->order('ord');
+        });
+        foreach ($group['product_list'] as $value) {
+            $value['img_list'] = HeaderGroupProductSwiper::all(['header_group_product_id' => $value['id']]);
+        }
+        exit_json(1, "请求成功", $group);
     }
 
 
@@ -159,9 +193,19 @@ class Header extends Controller
         //TODO 参团数量处理
         foreach ($header_group as $item) {
             //参团人员
-            $item['join_list'] = [];
+            $item['join_list'] = [
+                [
+                    'avatar' => "https://wx.qlogo.cn/mmopen/vi_32/lahrxb0oKdD5yJK3HTciaKWbZlruWTDRTT2J5HvBkqV7e8JicuFVsUzvkdjiaSXTO7jr9ibRDT3T7xJwkMFP6FR39Q/132",
+                ],
+                [
+                    'avatar' => "https://wx.qlogo.cn/mmopen/vi_32/lahrxb0oKdD5yJK3HTciaKWbZlruWTDRTT2J5HvBkqV7e8JicuFVsUzvkdjiaSXTO7jr9ibRDT3T7xJwkMFP6FR39Q/132",
+                ],
+                [
+                    'avatar' => "https://wx.qlogo.cn/mmopen/vi_32/lahrxb0oKdD5yJK3HTciaKWbZlruWTDRTT2J5HvBkqV7e8JicuFVsUzvkdjiaSXTO7jr9ibRDT3T7xJwkMFP6FR39Q/132",
+                ]
+            ];
             //团购产品列表
-            $item['product_list'] = model('HeaderGroupProduct')->where('header_group_id', $item['id']);
+            $item['product_list'] = model('HeaderGroupProduct')->where('header_group_id', $item['id'])->select();
         }
         $data = $header_group;
         exit_json(1, '请求成功', $data);
@@ -172,15 +216,137 @@ class Header extends Controller
      */
     public function getGroupDetail()
     {
-
         $group_id = input('group_id');
         $group = model('HeaderGroup')->alias('a')->join('Header b', 'a.header_id=b.id')->where('a.id', $group_id)->field('a.id, a.group_title, a.group_notice, a.status, b.nick_name, b.head_image')->find();
         $product_list = model('HeaderGroupProduct')->where('header_group_id', $group_id)->field('id, product_name, remain, sell_num, commission, market_price, group_price, product_desc')->order('ord')->select();
-        foreach ($product_list as $item){
+        foreach ($product_list as $item) {
             $item['img_list'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
         }
         $group['product_list'] = $product_list;
         exit_json(1, '请求成功', $group);
+    }
+
+    /**
+     * 开启团购
+     */
+    public function startGroup()
+    {
+        $group_id = input('group_id');
+        $group = HeaderGroup::get($group_id);
+        if ($group['header_id'] != $this->header_id) {
+            exit_json(-1, '登陆用户与团购创建用户不同');
+        } else {
+            if ($group['status'] != 0) {
+                exit_json(-1, '当前团购不是未开启状态');
+            }
+            $res = $group->save(['status' => 1, 'open_time' => date('Y-m-d H:i')]);
+            if ($res) {
+                exit_json();
+            } else {
+                exit_json(-1, '开启失败');
+            }
+        }
+    }
+
+    /**
+     * 更改头像
+     */
+    public function modifyAvatar()
+    {
+        $avatar_url = input('avatar_url');
+        if (!$avatar_url) {
+            exit_json(-1, '参数错误');
+        }
+        $res = model('Header')->save(['head_image' => $avatar_url], ['id' => $this->header_id]);
+        if ($res) {
+            exit_json();
+        } else {
+            exit_json(-1, '修改失败');
+        }
+    }
+
+    /**
+     *  更改昵称
+     */
+    public function modifyNickName()
+    {
+        $nick_name = input('nick_name');
+        $res = model('Header')->save(['nick_name' => $nick_name], ['id' => $this->header_id]);
+        if ($res) {
+            exit_json();
+        } else {
+            exit_json(-1, '修改失败');
+        }
+    }
+
+    /**
+     * 获取城主基础信息
+     */
+    public function getHeaderInfo()
+    {
+        $header = model('Header')->where('id', $this->header_id)->field('id header_id, name, nick_name, head_image, amount_able+amount_lock amount, amount_able')->find();
+        exit_json(1, '请求成功', $header);
+    }
+
+    /**
+     * 我的团长列表
+     */
+    public function getMyLeader()
+    {
+        $page = input('page');
+        $page_num = input('page_num');
+        $status = input('status');
+        $list = model('ApplyLeaderRecord')->alias('a')->join('User b', 'a.user_id=b.id')->where(['a.header_id'=>$this->header_id, 'a.status'=>$status])->field('a.id, a.name, a.status, b.avatar')->limit($page*$page_num, $page_num)->select();
+        exit_json(1, '请求成功', $list);
+    }
+
+    /**
+     * 团长申请详情
+     */
+    public function getMyLeaderDet()
+    {
+        $apply_id = input('id');
+        $data = ApplyLeaderRecord::get($apply_id);
+
+        exit_json(1, '请求成功', $data);
+    }
+
+    /**
+     * 同意团长申请
+     */
+    public function agreeLeader()
+    {
+        $apply_id = input('id');
+        $data = ApplyLeaderRecord::get($apply_id);
+        if($data && $data['status'] == 0){
+            if($data['header_id'] != $this->header_id){
+                exit_json(-1, '权限错误');
+            }
+            $data->save(['status'=>1]);
+            model('User')->where('id', $data['user_id'])->find()->save(['role_status'=>2, "header_id"=>$this->header_id]);
+            exit_json();
+        }else{
+            exit_json(-1,'申请记录不存在或已处理');
+        }
+    }
+
+    /**
+     * 团长申请拒绝
+     */
+    public function refuseLeader()
+    {
+        $apply_id = input('id');
+        $data = ApplyLeaderRecord::get($apply_id);
+        $reason = input('reason');
+        if($data && $data['status'] == 0){
+            if($data['header_id'] != $this->header_id){
+                exit_json(-1, '权限错误');
+            }
+            $data->save(['status'=>2, 'remarks'=>$reason]);
+            exit_json();
+        }else{
+            exit_json(-1,'申请记录不存在或已处理');
+        }
     }
 
 

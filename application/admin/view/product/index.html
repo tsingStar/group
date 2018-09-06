@@ -1,0 +1,60 @@
+﻿{include file='pub/header'/}
+<title>商品库</title>
+<link rel="stylesheet" href="__STATIC__/lib/zTree/v3/css/zTreeStyle/zTreeStyle.css" type="text/css">
+</head>
+<body>
+<nav class="breadcrumb">{$breadNav}</nav>
+<table class="table" style="min-height: 800px;">
+    <tr>
+        <td width="200" class="va-t">
+            <ul id="treeDemo" class="ztree"></ul>
+        </td>
+        <td class="va-t" style="height: 800px;">
+            <iframe ID="testIframe" Name="testIframe" FRAMEBORDER=0 SCROLLING=AUTO width=100% height=100%
+                    SRC=""></iframe>
+        </td>
+    </tr>
+</table>
+{include file='pub/footer'/}
+<script type="text/javascript" src="__STATIC__/lib/zTree/v3/js/jquery.ztree.all-3.5.min.js"></script>
+<script type="text/javascript">
+    var setting = {
+        view: {
+            dblClickExpand: false,
+            showLine: true,
+            selectedMulti: false
+        },
+        data: {
+            simpleData: {
+                enable: true,
+                idKey: "id",
+                pIdKey: "pId",
+                rootPId: ""
+            }
+        },
+        callback: {
+            beforeClick: function (treeId, treeNode) {
+                var zTree = $.fn.zTree.getZTreeObj(treeId);
+                if (treeNode.isParent) {
+                    zTree.expandNode(treeNode);
+                    return false;
+                } else {
+                    demoIframe.attr("src", "{:url('Product/plist')}?cateId="+treeNode.id);
+                    return true;
+                }
+            }
+        }
+    };
+    var zNodes ={:json_encode($cateList)};
+    $(document).ready(function () {
+        var t = $("#treeDemo");
+        t = $.fn.zTree.init(t, setting, zNodes);
+        demoIframe = $("#testIframe");
+        demoIframe.attr("src", "{:url('Product/plist')}");
+        //demoIframe.on("load", loadReady);
+        //var zTree = $.fn.zTree.getZTreeObj("tree");
+        //zTree.selectNode(zTree.getNodeByParam("id",'11'));
+    });
+</script>
+</body>
+</html>
