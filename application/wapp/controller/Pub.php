@@ -16,6 +16,11 @@ use think\Log;
 
 class Pub extends Controller
 {
+
+    public function test()
+    {
+        
+    }
     protected function _initialize()
     {
         parent::_initialize();
