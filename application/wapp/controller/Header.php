@@ -68,7 +68,7 @@ class Header extends Controller
             }
             //团购商品信息
             $product_list = input('product_list/a');
-            foreach ($product_list as $key=>$item) {
+            foreach ($product_list as $key => $item) {
 //            $item = json_decode($item, true);
                 $base_id = $item['base_id'];
                 if (!$base_id) {
@@ -142,6 +142,63 @@ class Header extends Controller
             model('HeaderGroupProduct')->rollback();
             model('HeaderGroupProductSwiper')->rollback();
             exit_json(-1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 城主自提点
+     */
+    public function getAddressList()
+    {
+        $address_list = db("header_pick_address")->where('header_id', $this->header_id)->field('id, name, address, address_det')->select();
+        exit_json(1, '请求成功', $address_list);
+    }
+
+    /**
+     * 添加自提点
+     */
+    public function addAddress()
+    {
+        $data = [
+            'name' => input('name'),
+            'address' => input('address'),
+            'address_det' => input('address_det'),
+            'header_id'=>$this->header_id
+        ];
+        $id = db('header_pick_address')->insertGetId($data);
+        $res = [
+            'id' => $id,
+            'name' => $data['name'],
+            'address' => $data['address'],
+            'address_det' => $data['address_det']
+        ];
+        exit_json(1, '操作成功', $res);
+    }
+
+    /**
+     * 编辑自提点
+     */
+    public function editAddress()
+    {
+        $id = input('id');
+        $name = input('name');
+        $address = input('address');
+        $address_det = input('address_det');
+        $res = db('header_pick_address')->where('id', $id)->update([
+            'name' => $name,
+            'address' => $address,
+            'address_det' => $address_det,
+            'update_time' => time()
+        ]);
+        if ($res) {
+            exit_json(1, '修改成功', [
+                'id' => $id,
+                'name' => $name,
+                'address' => $address,
+                'address_det' => $address_det,
+            ]);
+        } else {
+            exit_json(-1, '编辑失败');
         }
     }
 
@@ -296,7 +353,7 @@ class Header extends Controller
         $page = input('page');
         $page_num = input('page_num');
         $status = input('status');
-        $list = model('ApplyLeaderRecord')->alias('a')->join('User b', 'a.user_id=b.id')->where(['a.header_id'=>$this->header_id, 'a.status'=>$status])->field('a.id, a.name, a.status, b.avatar')->limit($page*$page_num, $page_num)->select();
+        $list = model('ApplyLeaderRecord')->alias('a')->join('User b', 'a.user_id=b.id')->where(['a.header_id' => $this->header_id, 'a.status' => $status])->field('a.id, a.name, a.status, b.avatar')->limit($page * $page_num, $page_num)->select();
         exit_json(1, '请求成功', $list);
     }
 
@@ -318,15 +375,15 @@ class Header extends Controller
     {
         $apply_id = input('id');
         $data = ApplyLeaderRecord::get($apply_id);
-        if($data && $data['status'] == 0){
-            if($data['header_id'] != $this->header_id){
+        if ($data && $data['status'] == 0) {
+            if ($data['header_id'] != $this->header_id) {
                 exit_json(-1, '权限错误');
             }
-            $data->save(['status'=>1]);
-            model('User')->where('id', $data['user_id'])->find()->save(['role_status'=>2, "header_id"=>$this->header_id]);
+            $data->save(['status' => 1]);
+            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => $this->header_id]);
             exit_json();
-        }else{
-            exit_json(-1,'申请记录不存在或已处理');
+        } else {
+            exit_json(-1, '申请记录不存在或已处理');
         }
     }
 
@@ -338,14 +395,14 @@ class Header extends Controller
         $apply_id = input('id');
         $data = ApplyLeaderRecord::get($apply_id);
         $reason = input('reason');
-        if($data && $data['status'] == 0){
-            if($data['header_id'] != $this->header_id){
+        if ($data && $data['status'] == 0) {
+            if ($data['header_id'] != $this->header_id) {
                 exit_json(-1, '权限错误');
             }
-            $data->save(['status'=>2, 'remarks'=>$reason]);
+            $data->save(['status' => 2, 'remarks' => $reason]);
             exit_json();
-        }else{
-            exit_json(-1,'申请记录不存在或已处理');
+        } else {
+            exit_json(-1, '申请记录不存在或已处理');
         }
     }
 

@@ -256,10 +256,10 @@ return [
     'adminKey' => 'admin_id',
     'default_img' => __URL__ . '/default_img.jpg',
     'weixin' => [
-        'app_id' => "wx3295551e5d4979cf",
-        'mch_id' => "1490951862",   /*微信申请成功之后邮件中的商户id*/
-        'api_key' => "50F97ECD3CE0A9C8232EA065C614AE71",    /*在微信商户平台上自己设定的api密钥 32位*/
-        'app_secret' => 'b9489044bb4496362dbe96ad594dc345',   //公众号支付
+        'app_id'=>'wx867e1f8696515384',
+        'app_secret'=>'bcce7059af8f6a7457c17eabaa89c94c',
+        'mch_id'=>'1324685701',
+        'api_key'=>'dea2d27952eea90485b00ead22279644',
         'cert_path' => __PUBLIC__ . '/apiclient_cert.pem',
         'key_path' => __PUBLIC__ . '/apiclient_key.pem'
     ],

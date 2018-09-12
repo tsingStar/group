@@ -19,7 +19,8 @@ class Pub extends Controller
 
     public function test()
     {
-        
+
+
     }
     protected function _initialize()
     {
@@ -77,6 +78,9 @@ class Pub extends Controller
             'province' => $province,
             'country' => $country
         ];
+        if(!$open_id){
+            exit_json(-1, '登陆失败');
+        }
         $user = model('User')->where('open_id', $open_id)->find();
         if ($user) {
             $data['update_time'] = time();
@@ -143,7 +147,6 @@ class Pub extends Controller
     public function uploadImg()
     {
         $file = request()->file('file');
-        Log::error($file);
         if ($file) {
             $ext_array = ['jpg', 'jpeg', 'png', 'mp4', '3gp', 'avi'];
             $ext = $file->checkExt($ext_array);
