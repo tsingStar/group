@@ -40,26 +40,25 @@ class PayResult extends Controller
             }
             $orderInfo = $this->formatRes($validRes);
 
-//            $payInfo = [];
-//            $payInfo['out_trade_no'] = "201809101552337366105";
-//            $payInfo['trade_no'] = "483928395384923832";
-//            $payInfo['total_money'] = 5000 / 100;
-//            $orderInfo = $payInfo;
-
-
             model('OrderPre')->startTrans();
             model('Order')->startTrans();
             model('OrderDet')->startTrans();
             $order_pre = model('OrderPre')->where('order_no', $orderInfo['out_trade_no'])->find();
-            if($order_pre['status'] == 0){
+            if ($order_pre['status'] === 0) {
                 $order_det = json_decode($order_pre['order_det'], true);
-                if($orderInfo['total_money'] == $order_det['order_money']){
+                if ($orderInfo['total_money'] == $order_det['order_money']) {
                     //订单支付成功
                     //修改预支付订单状态，填写用户订单及订单详情
-                    $res1 = $order_pre->save(['status'=>1, 'transaction_id'=>$orderInfo['trade_no']]);
+                    $res1 = $order_pre->save(['status' => 1, 'transaction_id' => $orderInfo['trade_no']]);
+                    $order_det["transaction_id"] = $orderInfo['trade_no'];
+
+                    //添加订单序号
+                    $num = model("Order")->getLastNum($order_det["group_id"]);
+                    $order_det["num"] = $num;
+                    //添加订单序号结束
                     $res2 = model('Order')->allowField(true)->save($order_det);
                     $product_list = [];
-                    foreach ($order_det['product_list'] as $item){
+                    foreach ($order_det['product_list'] as $item) {
                         $t = $item;
                         unset($t['id']);
                         $t['product_id'] = $item['id'];
@@ -68,26 +67,27 @@ class PayResult extends Controller
                         $product_list[] = $t;
                     }
                     $res3 = model('OrderDet')->allowField(true)->saveAll($product_list);
-                    if($res1 && $res2 && $res3){
+                    if ($res1 && $res2 && $res3) {
                         //订单支付后处理，佣金等信息
-                        model("Order")->orderSolve($order_pre);
+                        model("Order")->orderSolve($product_list);
                         model('OrderPre')->commit();
                         model('Order')->commit();
                         model('OrderDet')->commit();
-                    }else{
+                    } else {
                         model('OrderPre')->rollback();
                         model('Order')->rollback();
                         model('OrderDet')->rollback();
                     }
-                }else{
-                    Log::error("订单支付金额错误".$orderInfo['out_trade_no']);
+                } else {
+                    Log::error("订单支付金额错误" . $orderInfo['out_trade_no']);
                 }
-            }else{
-                Log::error('订单已处理'.$orderInfo['out_trade_no']);
+            } else {
+                Log::error('订单已处理' . $orderInfo['out_trade_no']);
             }
-        }else{
-            Log::error('订单支付失败'.json_encode($_POST));
+        } else {
+            Log::error('订单支付失败' . json_encode($_POST));
         }
+        header("Content-Type:application/xml");
         echo '<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>';
     }
 

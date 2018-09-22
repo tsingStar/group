@@ -14,6 +14,7 @@ use app\common\model\ApplyLeaderRecord;
 use app\common\model\Group;
 use app\common\model\WeiXinPay;
 use think\Controller;
+use think\Log;
 
 class User extends Controller
 {
@@ -93,8 +94,7 @@ class User extends Controller
      */
     public function getGroupList()
     {
-        //TODO 获取团长id
-        $leader_id = 3;
+        $leader_id = db("LeaderRecord")->where("user_id", $this->user["id"])->value("leader_id");
         $page = input('page');
         $page_num = input('page_num');
         $list = model('Group')->alias('a')->join('User b', "a.leader_id=b.id")->where('a.leader_id', $leader_id)->field('a.id group_id, a.status, a.open_time, a.title, a.notice, b.user_name, b.avatar')->order('a.create_time desc')->limit($page * $page_num, $page_num)->select();
@@ -108,24 +108,44 @@ class User extends Controller
     public function getGroupDetail()
     {
         $group_id = input('group_id');
-        $group = model('Group')->where("id", $group_id)->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status')->find();
+        $group = model('Group')->where("id", $group_id)->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status, scan_num')->find();
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
+        $lr = db("LeaderRecord")->where("user_id", $this->user["id"])->find();
+        if($lr){
+            db("LeaderRecord")->where(["user_id"=>$this->user["id"]])->update(["leader_id"=>$group["leader_id"]]);
+        }else{
+            db("LeaderRecord")->insert(["user_id"=>$this->user["id"], "leader_id"=>$group["leader_id"]]);
+        }
+        $group->save(["scan_num"=>$group["scan_num"]+1]);
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price')->order('ord')->select();
         foreach ($product_list as $value) {
-            $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->find();
+            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
         }
-        //TODO 添加团购销售情况
+
+        //获取显示状态
+        $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
+        if(!$config){
+            db("HeaderConfig")->insert(["header_id"=>$group["header_id"]]);
+            $show = 1;
+        }else{
+            $show = $config["sale_detail_show"];
+        }
+        $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
+        $order_num = model("Order")->where("group_id", $group_id)->count();
         $group['sale_detail'] = [
-            "is_show" => 1,
+            "is_show" => $show,
             "detail" => [
-                "scan_number" => 10,
-                "order_number" => 100,
-                "order_money" => 1000
+                "scan_number" => $group["scan_num"],
+                "order_number" => $order_num,
+                "order_money" => $order_money
             ]
         ];
         $group['product_list'] = $product_list;
+        $leader = model("User")->where("id", $group["leader_id"])->find();
+        $group["user_name"] = $leader["user_name"];
+        $group["avatar"] = $leader["avatar"];
         exit_json(1, '请求成功', $group);
     }
 
@@ -147,7 +167,7 @@ class User extends Controller
         $group_id = input('group_id');
         $page = input('page');
         $page_num = input('page_num');
-        $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name')->limit($page * $page_num, $page_num)->select();
+        $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
         foreach ($record_list as $l) {
             $l['product_num'] = model('OrderDet')->where('order_no', $l['order_no'])->sum('num');
         }
@@ -172,7 +192,7 @@ class User extends Controller
         }
 
         //团员限购
-        if ($product['self_limit'] && $product['self_limit'] < $num) {
+        if ($product['self_limit'] > 0 && $product['self_limit'] < $num) {
             exit_json(-1, '商品个人限购' . $product['self_limit'] . '件');
         }
 
@@ -236,19 +256,53 @@ class User extends Controller
             "out_trade_no" => $data['order_no'],
             "total_amount" => $data['order_money'],
             "trade_type" => "JSAPI",
-            "open_id"=>$this->user['open_id']
+            "open_id" => $this->user['open_id']
         ];
         $notify_url = config('notify_url');
         model('OrderPre')->startTrans();
         $res = model('OrderPre')->save(['order_no' => $order_no, "order_det" => json_encode($data)]);
-//        $order_info = $weixin->createPrePayOrder($order_info, $notify_url);
-        $order_info = true;
-        if ($res && $order_info) {
+        $order_pre = $weixin->createPrePayOrder($order_info, $notify_url);
+//        $order_pre = true;
+        if ($res && $order_pre) {
             model('OrderPre')->commit();
-            exit_json(1, '请求成功', $order_info);
+            exit_json(1, '请求成功', $order_pre);
         } else {
+            model('OrderPre')->rollback();
             exit_json(-1, '系统错误');
         }
+    }
+
+    /**
+     * 获取订单列表
+     */
+    public function getOrderList()
+    {
+        $list = model('Order')->alias('a')->join('Group b', 'a.group_id=b.id')->where('user_id', $this->user['id'])->field("b.title, a.create_time, a.pick_status, a.order_no, a.order_money-a.refund_money final_cost")->select();
+        exit_json(1, '请求成功', $list);
+    }
+
+    /**
+     * 获取订单详情
+     */
+    public function getOrderDetail()
+    {
+        $order_no = input('order_no');
+        $order = model("Order")->where("order_no", $order_no)->where('user_id', $this->user['id'])->find();
+        $product_list = model('OrderDet')->where('order_no', $order_no)->select();
+        foreach ($product_list as $item) {
+            $item['product_swiper'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
+        }
+        $order['product_list'] = $product_list;
+        exit_json(1, '请求成功', $order);
+    }
+
+    /**
+     * 获取提货码
+     */
+    public function getPickQrcode()
+    {
+        //TODO
+
     }
 
 

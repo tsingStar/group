@@ -17,5 +17,6 @@ class HeaderGroupProduct extends Model
     {
         parent::initialize();
     }
+    protected $autoWriteTimestamp = true;
 
 }

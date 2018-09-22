@@ -19,9 +19,12 @@ class Pub extends Controller
 
     public function test()
     {
-
+        $group_id = 57;
+        $group_list = model("GroupProduct")->where("header_group_id", $group_id)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id")->select();
+        print_r($group_list);
 
     }
+
     protected function _initialize()
     {
         parent::_initialize();
@@ -40,7 +43,7 @@ class Pub extends Controller
         }
         $res = file_get_contents("https://api.weixin.qq.com/sns/jscode2session?appid=$app_id&secret=$app_secret&js_code=$js_code&grant_type=authorization_code");
         $res = json_decode($res, true);
-        if (!$res['openid']) {
+        if (!isset($res['openid'])) {
             exit_json(-1, $res['errmsg']);
         }
         $session_key = $res['session_key'];
@@ -78,7 +81,7 @@ class Pub extends Controller
             'province' => $province,
             'country' => $country
         ];
-        if(!$open_id){
+        if (!$open_id) {
             exit_json(-1, '登陆失败');
         }
         $user = model('User')->where('open_id', $open_id)->find();
@@ -93,7 +96,7 @@ class Pub extends Controller
         if ($res) {
             exit_json(1, '登陆成功', model('User')->find($user_id));
         } else {
-            exit_json(-1, '登陆失败');
+            exit_json(-1, '登陆失败asdfghj');
         }
     }
 
@@ -157,7 +160,7 @@ class Pub extends Controller
             if ($info) {
                 $saveName = $info->getSaveName();
                 $path = __URL__ . "/upload/" . $saveName;
-                exit_json(1, '操作成功', ['img_url' => $path]);
+                exit_json(1, '操作成功', ["img_url" => $path]);
             } else {
                 // 上传失败获取错误信息
                 exit_json(-1, $file->getError());

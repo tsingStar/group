@@ -258,14 +258,14 @@ return [
     'weixin' => [
         'app_id'=>'wx867e1f8696515384',
         'app_secret'=>'bcce7059af8f6a7457c17eabaa89c94c',
-        'mch_id'=>'1324685701',
-        'api_key'=>'dea2d27952eea90485b00ead22279644',
+        'mch_id' => "1490951862",   /*微信申请成功之后邮件中的商户id*/
+        'api_key' => "50F97ECD3CE0A9C8232EA065C614AE71",    /*在微信商户平台上自己设定的api密钥 32位*/
         'cert_path' => __PUBLIC__ . '/apiclient_cert.pem',
         'key_path' => __PUBLIC__ . '/apiclient_key.pem'
     ],
     'wapp'=>[
-        'app_id'=>'wx7dc30a2fadc5acff',
-        'app_secret'=>'2e4e18cc8628449e7127b56965efd578'
+        'app_id'=>'wx867e1f8696515384',
+        'app_secret'=>'bcce7059af8f6a7457c17eabaa89c94c'
     ],
     //支付回调地址
     'notify_url' => __URL__ . '/admin/PayResult',

@@ -26,11 +26,12 @@ class WeiXinPay
         $inputObj->SetTotal_fee($orderInfo['total_amount'] * 100);
         $inputObj->SetNotify_url($notify_url);
         $inputObj->SetTrade_type($orderInfo['trade_type']);
-        if($orderInfo['trade_type'] == "JSAPI"){
+        if ($orderInfo['trade_type'] == "JSAPI") {
             $inputObj->SetOpenid($orderInfo['open_id']);
         }
         try {
             $orderString = \WxPayApi::unifiedOrder($inputObj);
+            Log::error($orderString);
             return $orderString;
         } catch (\Exception $e) {
             Log::error('微信支付异常：' . $e->getMessage());
@@ -60,6 +61,7 @@ class WeiXinPay
     {
         $inputObj = new \WxPayRefund();
         $inputObj->SetTransaction_id($order['trade_no']);
+        $inputObj->SetOut_trade_no($order["order_no"]);
         $inputObj->SetOut_refund_no($order['refund_id']);
         $inputObj->SetTotal_fee($order['total_money'] * 100);
         $inputObj->SetRefund_fee($order['refund_money'] * 100);
@@ -73,11 +75,42 @@ class WeiXinPay
                 Log::error("微信退款失败：" . $result["err_code_des"]);
                 return false;
             }
-        } catch (\Exception $e){
+        } catch (\Exception $e) {
             Log::error("微信退款失败：" . $e->getMessage());
             return false;
         }
+    }
 
+    /**
+     * 付款到用户
+     */
+    public function withdraw($order)
+    {
+        $inputObj = new \WxMchPay();
+        $inputObj->SetOpenid($order["open_id"]);
+        $inputObj->SetAmount($order["amount"]*100);
+        $inputObj->SetCheckName($order["check_name"]);
+        $inputObj->SetDesc($order["desc"]);
+        $inputObj->SetPartnerTradeNo($order["order_no"]);
+        try{
+            $result = \WxPayApi::mchPay($inputObj);
+            Log::error("企业付款记录".json_encode($result));
+            if($result['return_code'] == "SUCCESS" && $result['result_code'] == "SUCCESS"){
+                return $result;
+            }else{
+                Log::error("企业支付失败：".$result["err_code_des"]);
+                return false;
+            }
+
+        }catch (\Exception $e){
+            Log::error("企业付款异常：".$e->getMessage());
+            return false;
+        }
+
+
+
+
+        
     }
 
 }

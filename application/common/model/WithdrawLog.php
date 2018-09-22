@@ -1,10 +1,9 @@
 <?php
 /**
- * 团购产品
  * Created by PhpStorm.
  * User: Administrator
- * Date: 2018-09-05
- * Time: 15:04
+ * Date: 2018-09-21
+ * Time: 11:48
  */
 
 namespace app\common\model;
@@ -12,13 +11,11 @@ namespace app\common\model;
 
 use think\Model;
 
-class GroupProduct extends Model
+class WithdrawLog extends Model
 {
     protected function initialize()
     {
         parent::initialize();
     }
-
-    protected $autoWriteTimestamp = true;
 
 }

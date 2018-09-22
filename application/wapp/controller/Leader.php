@@ -11,6 +11,8 @@ namespace app\wapp\controller;
 
 
 use app\common\model\Group;
+use app\common\model\SendSms;
+use app\common\model\WeiXinPay;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -64,7 +66,7 @@ class Leader extends Controller
     }
 
     /**
-     * 校验军团是否已创建
+     * 校验团购是否已创建
      */
     public function checkIsGroup()
     {
@@ -136,6 +138,20 @@ class Leader extends Controller
         }
     }
 
+    /**
+     * 删除自提点
+     */
+    public function delAddress()
+    {
+        $address_id = input('address_id');
+        $res = db('LeaderPickAddress')->where('id', $address_id)->delete();
+        if ($res) {
+            exit_json();
+        } else {
+            exit_json(-1, '删除失败');
+        }
+
+    }
 
     /**
      * 保存/开启团购
@@ -167,13 +183,17 @@ class Leader extends Controller
         try {
             //团购id
             $group_id = input('group_id');
-            if ($group_id) {
+            $group = model('Group')->where(["header_group_id" => $data['header_group_id'],
+                "leader_id" => $data['leader_id']])->find();
+            if ($group) {
                 //团购已存在更新团购信息
-                $group = model('Group')->where('id', $group_id)->find();
-                if (!$group) {
-                    exit_json(-1, '团购不存在');
-                }
-                $res1 = $group->save($data);
+//                $group = model('Group')->where('id', $group_id)->find();
+//                if (!$group) {
+//                    exit_json(-1, '团购不存在');
+//                }
+                $group_id = $group['id'];
+                $data['update_time'] = time();
+                $res1 = $group->isUpdate(true)->save($data);
             } else {
                 //团购不存在根据军团信息填充团购信息
                 $res1 = model('Group')->save($data);
@@ -185,11 +205,16 @@ class Leader extends Controller
 
             $product_list = input('product_list/a');
             foreach ($product_list as $key => $item) {
+                if (!isset($item["header_product_id"])) {
+                    $header_product_id = $item['id'];
+                } else {
+                    $header_product_id = $item['header_product_id'];
+                }
                 $pro_data = [
                     'leader_id' => $data['leader_id'],
                     'header_group_id' => $data['header_group_id'],
                     'group_id' => $group_id,
-                    'header_product_id' => $item['header_product_id'],
+                    'header_product_id' => $header_product_id,
                     'product_name' => $item['product_name'],
                     'commission' => $item['commission'],
                     'market_price' => $item['market_price'],
@@ -199,29 +224,31 @@ class Leader extends Controller
                     'ord' => $key,
                     'product_desc' => $item['product_desc'],
                 ];
-                if ($item['id']) {
-                    $res2 = model('GroupProduct')->where('id', $item['id'])->find()->save($pro_data);
-                    $product_id = $item['id'];
-                    model('GroupProductSwiper')->where('group_product_id', $product_id)->delete();
+                $group_product = model('GroupProduct')->where(["leader_id" => $pro_data['leader_id'], "group_id" => $pro_data['group_id'], "header_product_id" => $pro_data['header_product_id']])->find();
+                if ($group_product) {
+                    $pro_data['update_time'] = time();
+                    $res2 = $group_product->save($pro_data, $group_product['id']);
+//                    $product_id = $item['id'];
+//                    model('GroupProductSwiper')->where('group_product_id', $product_id)->delete();
                 } else {
                     $res2 = model('GroupProduct')->data($pro_data)->isUpdate(false)->save();
-                    $product_id = model('GroupProduct')->getLastInsID();
+//                    $product_id = model('GroupProduct')->getLastInsID();
                 }
                 if (!$res2) {
                     throw new Exception("添加商品失败");
                 }
-                $swiper = [];
-                foreach ($item['product_img'] as $val) {
-                    $swiper[] = [
-                        'swiper_type' => $val['types'],
-                        'swiper_url' => $val['urlImg'],
-                        'group_product_id' => $product_id
-                    ];
-                }
-                $res3 = model('GroupProductSwiper')->saveAll($swiper);
-                if (!$res3) {
-                    throw new Exception("轮播图添加失败");
-                }
+//                $swiper = [];
+//                foreach ($item['product_img'] as $val) {
+//                    $swiper[] = [
+//                        'swiper_type' => $val['types'],
+//                        'swiper_url' => $val['urlImg'],
+//                        'group_product_id' => $product_id
+//                    ];
+//                }
+//                $res3 = model('GroupProductSwiper')->saveAll($swiper);
+//                if (!$res3) {
+//                    throw new Exception("轮播图添加失败");
+//                }
             }
             model('Group')->commit();
             model('GroupProduct')->commit();
@@ -247,7 +274,8 @@ class Leader extends Controller
         }
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field("id, leader_id, header_group_id, group_id, header_product_id, product_name, commission, market_price, group_price, group_limit, self_limit, product_desc")->order('ord')->select();
         foreach ($product_list as $item) {
-            $item['product_img'] = model('GroupProductSwiper')->where('group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $item['product_img'] = model('GroupProductSwiper')->where('group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
+            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
         }
         $group['product_list'] = $product_list;
         //若为自提团长选择自提点
@@ -287,21 +315,32 @@ class Leader extends Controller
     public function groupDetail()
     {
         $group_id = input('group_id');
-        $group = model('Group')->where("id", $group_id)->field('id group_id, title, notice, pay_type, status')->find();
+        $group = model('Group')->alias("a")->join("HeaderGroup b", "a.header_group_id=b.id")->where("a.id", $group_id)->field('a.id group_id, a.title, a.notice, a.pay_type, a.status, a.header_id')->find();
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
-        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price')->select();
+        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price, header_product_id')->select();
         foreach ($product_list as $value) {
-            $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->find();
+//            $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->find();
+            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
         }
-        //TODO 添加团购销售情况
+        //获取显示状态
+        $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
+        if(!$config){
+            db("HeaderConfig")->insert(["header_id"=>$group["header_id"]]);
+            $show = 1;
+        }else{
+            $show = $config["sale_detail_show"];
+        }
+        $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
+        $order_num = model("Order")->where("group_id", $group_id)->count();
+        $sale_num = model("OrderDet")->where("group_id", $group_id)->sum("num-back_num");
         $group['sale_detail'] = [
-            "is_show" => 1,
+            "is_show" => $show,
             "detail" => [
-                "total_order" => 10,
-                "total_sale" => 100,
-                "total_money" => 1000
+                "total_order" => $order_num,
+                "total_sale" => $sale_num,
+                "total_money" => $order_money
             ]
         ];
         $group['product_list'] = $product_list;
@@ -319,7 +358,7 @@ class Leader extends Controller
             exit_json(-1, "团购不存在");
         }
         if ($group['status'] != 0) {
-            exit_json(-1, '团购已开启');
+            exit_json(-1, '团购已开启，无需再次开启');
         }
         if ($group->save(['status' => 1, 'open_time' => date('Y-m-d H:i')])) {
             exit_json(1, '开启成功');
@@ -335,6 +374,10 @@ class Leader extends Controller
     {
         $group_id = input('group_id');
         $group = model('Group')->where('id', $group_id)->where('leader_id', $this->leader_id)->find();
+        $is_close = model("HeaderGroup")->where("id", $group["header_group_id"])->value("is_close");
+        if ($is_close == 0) {
+            exit_json(-1, "当前团购不允许团长结束");
+        }
         if (!$group) {
             exit_json(-1, '团购不存在');
         }
@@ -355,10 +398,337 @@ class Leader extends Controller
     {
         $user = model("User")->where('id', $this->leader_id)->find();
         $data = [
-            'total_money'=>$user['amount_able']+$user['amount_lock'],
-            'amount_able'=>$user['amount_able']
+            'total_money' => $user['amount_able'] + $user['amount_lock'],
+            'amount_able' => $user['amount_able']
         ];
         exit_json(1, '请求成功', $data);
+    }
+
+    /**
+     * 获取团员订单
+     */
+    public function getUserOrderList()
+    {
+        $page = input('page');
+        $page_num = input('page_num');
+        $pick_status = input('pick_status'); //订单取货状态
+        $keywords = input('keywords'); //高级搜索关键字
+        $model = model("Order")->alias("a")->join("User b", "a.user_id=b.id")->join("Group c", "a.group_id=c.id");
+        $model->where("a.leader_id", $this->leader_id);
+        if (is_numeric($pick_status)) {
+            $model->where("a.pick_status", $pick_status);
+        }
+        if ($keywords) {
+            $where = [
+                "c.title|a.user_telephone|a.user_name" => ["like", "%$keywords%"],
+            ];
+            $model->where($where);
+        }
+        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace")->limit($page * $page_num, $page_num)->select();
+        foreach ($list as $item) {
+            $order_no = $item['order_no'];
+            $item['product_list'] = model('OrderDet')->getOrderPro($order_no);
+        }
+        exit_json(1, '请求成功', $list);
+
+    }
+
+    /**
+     * 获取团员订单详情
+     */
+    public function getUserOrderDet()
+    {
+        $order_no = input('order_no');
+        $order = model('Order')->where('order_no', $order_no)->field("leader_id, order_no, order_money, refund_money, user_name, pick_address, user_telephone, remarks, pick_status")->find();
+        if ($order['leader_id'] != $this->leader_id) {
+            exit_json(-1, '订单不存在');
+        }
+        $order['product_list'] = model("OrderDet")->getOrderPro($order_no);
+        exit_json(1, '请求成功', $order);
+    }
+
+    /**
+     * 处理团员订单
+     */
+    public function operaUserOrder()
+    {
+        $order_no = input("order_no");
+        $order = model('Order')->where('order_no', $order_no)->find();
+        if (!$order || $order['leader_id'] != $this->leader_id) {
+            exit_json(-1, '订单不存在');
+        }
+
+        if ($order['pick_status'] != 0) {
+            exit_json(-1, '订单已处理');
+        }
+        $res1 = $order->save(['pick_status' => 1]);
+        $res2 = model("OrderDet")->save(["status" => 3], ['status' => 0]);
+        if ($res1 && $res2) {
+            exit_json();
+        } else {
+            exit_json(-1, '处理失败');
+        }
+
+
+    }
+
+    /**
+     * 商品申请退款
+     */
+    public function applyRefund()
+    {
+        $order_no = input('order_no');
+        $product_id = input('product_id');
+        $num = input('num');
+        $reason = input('reason');
+        $product = model("OrderDet")->where('order_no', $order_no)->where('product_id', $product_id)->find();
+        $order = model('Order')->where('order_no', $order_no)->find();
+        if ($product) {
+            if ($num > $product['num'] - $product['back_num']) {
+                exit_json(-1, "退货数量大于订单剩余数量");
+            }
+            $or = model('OrderRefund')->where("order_no", $order_no)->where("product_id", $product_id)->find();
+            if ($or) {
+                exit_json(1, '申请成功');
+            } else {
+                $res = model('OrderRefund')->save([
+                    "group_id" => $product['group_id'],
+                    "leader_id" => $product['leader_id'],
+                    "header_id" => $order['header_id'],
+                    "product_id" => $product['product_id'],
+                    "header_product_id" => $product["header_product_id"],
+                    "order_no" => $product['order_no'],
+                    "num" => $num,
+                    "group_price" => $product['group_price'],
+                    "product_name" => $product['product_name'],
+                    "reason" => $reason
+                ]);
+//                $product->save(["back_num" => $num, "status" => 1]);
+                $product->save(["status" => 1]);
+                if ($res) {
+                    exit_json(1, "申请成功");
+                } else {
+                    exit_json(-1, '申请失败，刷新后重试');
+                }
+            }
+        } else {
+            exit_json(-1, "商品不存在");
+        }
+    }
+
+    /**
+     * 获取我的取货订单
+     */
+    public function getMyOrderList()
+    {
+        $pick_status = input('pick_status');
+        $title = input('title');
+        $page = input('page');
+        $page_num = input('page_num');
+        $model = model('Group');
+        if ($pick_status > 0) {
+            $model->where("pick_status", $pick_status);
+        } else {
+            $model->where("pick_status", "gt", 0);
+        }
+
+        if ($title != "") {
+            $model->where("title", "like", "%$title%");
+        }
+        $list = $model->where("leader_id", $this->leader_id)->where('status', 2)->field("id, title, pick_status")->limit($page * $page_num, $page_num)->select();
+        foreach ($list as $item) {
+            $temp = model("OrderDet")->where('group_id', $item['id'])->group("product_id")->field("sum(num) sum_num, group_price, product_name")->select();
+            $item['product_list'] = $temp;
+            $t = model("Order")->where('group_id', $item['id'])->field("sum(order_money) sum_money, sum(refund_money) sum_refund")->find();
+            $item['sum_money'] = $t['sum_money'];
+            $item['sum_refund'] = $t['sum_refund'];
+        }
+        exit_json(1, "请求成功", $list);
+    }
+
+    /**
+     * 获取我的取货订单详情
+     */
+    public function getMyOrderDetail()
+    {
+        $group_id = input('group_id');
+        $group = model('Group')->alias("a")->join("User b", "a.leader_id=b.id")->where('a.id', $group_id)->field("a.*, b.user_name, b.telephone")->find();
+        if (!$group) {
+            exit_json(-1, '团购不存在');
+        }
+        $data = [
+            "user_name" => $group['user_name'],
+            "user_telephone" => $group['telephone'],
+            "pick_address" => $group['pick_address'],
+            "pick_status" => $group['pick_status'],
+        ];
+        $item = model('Group')->getGroupDetail($group_id);
+        $data['product_list'] = $item["product_list"];
+        $data['sum_money'] = $item['sum_money'];
+        $data['sum_refund'] = $item['sum_refund'];
+        $data['refund_list'] = model("Group")->getRefundList($group_id);
+        exit_json(1, '请求成功', $data);
+    }
+
+    /**
+     * 取货订单处理
+     */
+    public function MyOrderSolve()
+    {
+        $group_id = input("group_id");
+        $group = model("Group")->where("id", $group_id)->find();
+        if (!$group) {
+            exit_json(-1, "团购不存在");
+        }
+        $res = $group->save(['pick_status' => 2]);
+        if ($res) {
+            exit_json();
+        } else {
+            exit_json(-1, "订单状态错误");
+        }
+    }
+
+    /**
+     * 获取退款列表
+     */
+    public function getRefundList()
+    {
+        $page = input("page");
+        $page_num = input("page_num");
+        $status = input('status');
+        if (!is_numeric($status) || !in_array($status, [0, 1, 2])) {
+            exit_json(-1, "参数错误");
+        }
+        $list = model("OrderRefund")->where("leader_id", $this->leader_id)->where('status', $status)->limit($page * $page_num, $page_num)->field("id, product_name, create_time")->select();
+        exit_json(1, '请求成功', $list);
+    }
+
+    /**
+     * 获取退款详情
+     */
+    public function getRefundDetail()
+    {
+        $refund_id = input('id');
+        $refund = model("OrderRefund")->where("id", $refund_id)->find();
+        if (!$refund) {
+            exit_json(-1, '退款记录不存在');
+        } else {
+            $data = [];
+            //订单详情
+            $order = model("Order")->where("order_no", $refund["order_no"])->find();
+            $order_detail = [
+                "order_no" => $order["order_no"],
+                "user_name" => $order["user_name"],
+                "user_telephone" => $order["user_telephone"],
+                "create_time" => $order["create_time"]
+            ];
+            $data["order_detail"] = $order_detail;
+            //团购详情
+            $group = model("Group")->alias("a")->join("User b", "a.leader_id=b.id")->where("a.id", $refund["group_id"])->field("a.*, b.user_name, b.telephone")->find();
+            $group_detail = [
+                "title" => $group["title"],
+                "user_name" => $group["user_name"],
+                "telephone" => $group["telephone"],
+                "remarks" => $refund["reason"],
+                "refuse_reason" => $refund["refuse_reason"]
+            ];
+            $data["group_detail"] = $group_detail;
+            $product = model("GroupProduct")->where("id", $refund["product_id"])->find();
+            $data["sale_amount"] = $refund["num"];
+            $data["group_price"] = $refund["group_price"];
+            $data["commission_rate"] = $product["commission"];
+            $data["product_name"] = $product["product_name"];
+            $data["status"] = $refund["status"];
+            exit_json(1, '请求成功', $data);
+        }
+    }
+
+
+    /**
+     * 提现
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function withDraw()
+    {
+        $header = model("Leader")->where("id", $this->leader_id)->find();
+        if (!$header["open_id"]) {
+            exit_json(2, "账户未绑定微信号");
+        }
+        $amount = input("money");
+        if (!$amount || $amount < 10) {
+            exit_json(-1, "提现金额不合法");
+        }
+        //计算提现手续费及实际到账金额
+        $rate = 0.006;
+        $fee = round($amount * $rate, 2);
+        $money = $amount - $fee;
+        $order_no = getOrderNo();
+        model("WithdrawLog")->save([
+            "role" => 2,
+            "user_id" => $this->leader_id,
+            "amount" => $amount,
+            "fee" => $fee,
+            "money" => $money,
+            "status" => 0,
+            "order_no" => $order_no
+        ]);
+        $withdraw_id = model("WithdrawLog")->getLastInsID();
+        $log_model = model("WithdrawLog")->where("id", $withdraw_id)->find();
+        $weixin = new WeiXinPay();
+        $res = $weixin->withdraw([
+            "open_id" => $header["open_id"],
+            "amount" => $money,
+            "check_name" => "NO_CHECK",
+            "desc" => "军团提现到账",
+            "order_no" => $order_no
+        ]);
+        if (!is_bool($res)) {
+            $log_model->save(["withdraw_time" => $res["payment_time"], "status" => 1]);
+            $header->setDec("amount_able", $amount);
+            model("HeaderMoneyLog")->saveAll([
+                [
+                    "header_id" => $this->header_id,
+                    "type" => "3",
+                    "money" => $money,
+                    "order_no" => $order_no
+                ],
+                [
+                    "header_id" => $this->header_id,
+                    "type" => "4",
+                    "money" => $fee,
+                    "order_no" => $order_no
+                ]
+            ]);
+            exit_json();
+        } else {
+            exit_json(-1, "提现操作失败");
+        }
+    }
+
+    /**
+     * 订单短信通知
+     */
+    public function sendSms()
+    {
+        $order_no = input("order_no");
+        $order = model("Order")->where("order_no", $order_no)->find();
+        $phone = [
+            $order["user_telephone"]
+        ];
+        $param = [
+            $order["order_no"],
+            $order["pick_address"]
+        ];
+        $sms = new SendSms($phone, "9374132");
+        $res = $sms->sendTemplate($param);
+        if ($res) {
+            exit_json();
+        } else {
+            exit_json(-1, $sms->getError());
+        }
     }
 
 
