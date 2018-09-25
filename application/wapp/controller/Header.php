@@ -98,7 +98,7 @@ class Header extends Controller
                     'product_name' => $item['product_name'],
                     'header_group_id' => $group_id,
                     'base_id' => $base_id,
-                    'remain' => $item['remain'],
+                    'remain' => $item['remain']?$item['remain']:-1,
                     'commission' => $item['commission'],
                     'purchase_price' => $item['purchase_price'],
                     'market_price' => $item['market_price'],
@@ -429,7 +429,7 @@ class Header extends Controller
                 exit_json(-1, '权限错误');
             }
             $data->save(['status' => 1]);
-            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"]]);
+            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name"=>$data["name"]]);
             exit_json();
         } else {
             exit_json(-1, '申请记录不存在或已处理');
@@ -514,7 +514,7 @@ class Header extends Controller
         if ($keywords) {
             $model->whereLike("group_title", "%$keywords%");
         }
-        $list = $model->field("id, group_title, status")->limit($page * $page_num, $page_num)->select();
+        $list = $model->field("id, group_title, status")->limit($page * $page_num, $page_num)->order("create_time desc")->select();
         foreach ($list as $value) {
             $product_list = model("HeaderGroupProduct")->where("header_group_id", $value['id'])->where("sell_num", "gt", 0)->field("product_name, sell_num")->select();
             $value["product_list"] = $product_list;
@@ -644,7 +644,7 @@ class Header extends Controller
                 $refund_order = [
                     "order_no" => $refund["order_no"],
                     "trade_no" => $order["transaction_id"],
-                    "refund_id" => $refund["id"],
+                    "refund_id" => $refund["refund_no"],
                     "total_money" => $order["order_money"],
                     "refund_money" => $refund_money,
                     "shop_id" => $refund["leader_id"]
@@ -676,7 +676,7 @@ class Header extends Controller
                     $product->save(["back_num" => $refund["num"], "status" => 2]);
 
                     //佣金
-                    $commission = $order["commission_status"] * ($refund["num"] * $refund["group_price"]);
+                    $commission = $group_product["commission"] * ($refund["num"] * $refund["group_price"]) / 100;
                     //城主
                     $money = $refund["num"] * $refund["group_price"] - $commission;
 
@@ -686,16 +686,16 @@ class Header extends Controller
                     if ($group["status"] == 2) {
                         $header_money->save([
                             "header_id" => $refund["header_id"],
-                            "type" => 4,
+                            "type" => 2,
                             "money" => -$money,
-                            "order_no" => $refund["order_no"]
+                            "order_no" => $refund["id"]
                         ]);
 
                         $leader_money->save([
                             "leader_id" => $refund["leader_id"],
-                            "type" => 4,
+                            "type" => 2,
                             "money" => -$commission,
-                            "order_no" => $refund["order_no"]
+                            "order_no" => $refund["id"]
                         ]);
                         if ($order["commission_status"] == 1) {
                             //佣金已经处理过，退款同时减佣金及城主收入
@@ -749,7 +749,9 @@ class Header extends Controller
             exit_json(-1, "佣金已处理过");
         }
         //军团销售汇总
-        $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
+//        $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
+        $sum_money = model("GroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
+
         //团购销售汇总
         $group_list = model("GroupProduct")->where("header_group_id", $group_id)->whereIn("leader_id", $leader_ids)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id")->select();
 
@@ -858,7 +860,64 @@ class Header extends Controller
         }
     }
 
+    /**
+     * 获取余额列表
+     */
+    public function getMoneyLog()
+    {
+        $type_arr = [
+            "1" => "军团结算",
+            "2" => "退款冲减",
+            "3" => "提现冲减",
+            "4" => "提现手续费"
+        ];
+        $page = input("page");
+        $page_num = input("page_num");
+        $list = model("HeaderMoneyLog")->where("header_id", $this->header_id)->field("id, type, money, order_no, create_time")->limit($page * $page_num, $page_num)->order("create_time desc")->select();
+        foreach ($list as $item) {
+            $item["type_desc"] = $type_arr[$item["type"]];
+        }
+        exit_json(1, "请求成功", $list);
+    }
 
+    /**
+     * 获取余额变动明细
+     */
+    public function getMoneyLogDetail()
+    {
+        $log_id = input("id");
+        $detail = model("HeaderMoneyLog")->where("id", $log_id)->find();
+        switch ($detail["type"]) {
+            case 1:
+                $header_group = model("HeaderGroup")->where("id", $detail["order_no"])->find();
+                $product_list = model("HeaderGroupProduct")->where("header_group_id", $detail["order_no"])->field("product_name, commission, sell_num, group_price")->select();
+                exit_json(1, "", $product_list);
+                break;
+            case 2:
+                $refund = model("OrderRefund")->where("order_no", $detail["order_no"])->find();
+                $data = [
+                    "product_name" => $refund["product_name"],
+                    "group_price" => $refund["group_price"],
+                    "num" => $refund["num"]
+                ];
+                $product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
+                $data["commission"] = $product["commission"];
+                $order = model("Order")->where("order_no", $refund["order_no"])->find();
+                $data["order_no"] = $order["order_no"];
+                $data["user_name"] = $order["user_name"];
+                $data["user_telephone"] = $order["user_telephone"];
+                $data["create_time"] = $refund["create_time"];
+                $data["opera_time"] = $refund["update_time"];
+                $group = model("Group")->alias("a")->join("User b", "a.leader_id=b.id")->where("a.id", $refund["group_id"])->field("a.*, b.user_name, b.telephone")->find();
+                $data["title"] = $group["title"];
+                $data["leader_name"] = $group["user_name"];
+                $data["telephone"] = $group["telephone"];
+                $data["remarks"] = $refund["remarks"];
+                break;
+            default:
+                exit_json(-1, "明细不存在");
+        }
+    }
 
 
 }

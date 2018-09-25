@@ -118,7 +118,11 @@ class User extends Controller
         }else{
             db("LeaderRecord")->insert(["user_id"=>$this->user["id"], "leader_id"=>$group["leader_id"]]);
         }
-        $group->save(["scan_num"=>$group["scan_num"]+1]);
+        $uv = db("Uv")->where("user_id", $this->user["id"])->where("group_id", $group_id)->find();
+        if(!$uv){
+            db("Uv")->insert(["user_id"=>$this->user["id"], "group_id"=>$group_id]);
+            $group->save(["scan_num"=>$group["scan_num"]+1]);
+        }
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price')->order('ord')->select();
         foreach ($product_list as $value) {
             $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
@@ -167,7 +171,7 @@ class User extends Controller
         $group_id = input('group_id');
         $page = input('page');
         $page_num = input('page_num');
-        $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
+        $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
         foreach ($record_list as $l) {
             $l['product_num'] = model('OrderDet')->where('order_no', $l['order_no'])->sum('num');
         }
@@ -187,7 +191,7 @@ class User extends Controller
         $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
 
         //军团库存数量
-        if ($header_product['remain'] > 0 && $header_product['remain'] < $header_product['sell_num'] + $num) {
+        if ($header_product['remain'] != -1 && $header_product['remain'] < $header_product['sell_num'] + $num) {
             exit_json(-1, '商品库存不足');
         }
 
@@ -262,6 +266,7 @@ class User extends Controller
         model('OrderPre')->startTrans();
         $res = model('OrderPre')->save(['order_no' => $order_no, "order_det" => json_encode($data)]);
         $order_pre = $weixin->createPrePayOrder($order_info, $notify_url);
+        $order_pre["order_no"] = $order_no;
 //        $order_pre = true;
         if ($res && $order_pre) {
             model('OrderPre')->commit();
@@ -301,8 +306,51 @@ class User extends Controller
      */
     public function getPickQrcode()
     {
-        //TODO
+        $scene = input("scene");
+        $page = input("page");
+        $access_token = $this->getAccessToken();
+        $ch = curl_init();
+        $url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=".$access_token;
+        $post_data = [
+            "scene"=>$scene,
+            "page"=>$page
+        ];
+        curl_setopt($ch, CURLOPT_URL, $url);
+        // 执行后不直接打印出来
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // 设置请求方式为post
+        curl_setopt($ch, CURLOPT_POST, true);
+        // post的变量
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        // 请求头，可以传数组
+//        curl_setopt($ch, CURLOPT_HEADER, $header);
+        // 跳过证书检查
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        // 不从证书中检查SSL加密算法是否存在
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $output = curl_exec($ch);
+        curl_close($ch);
+        exit_json(1, "请求成功", ["data"=>$output]);
 
+    }
+
+    /**
+     * 获取access_token
+     * @return bool|mixed
+     */
+    private function getAccessToken()
+    {
+        if (cache("access_token")) {
+            return cache("access_token");
+        } else {
+            $res = json_decode(file_get_contents("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" . config("weixin.app_id") . "&secret=" . config("weixin.app_secret")), true);
+            if (!isset($res["access_token"])) {
+                return false;
+            } else {
+                cache("access_token", $res["access_token"]);
+                return $res["access_token"];
+            }
+        }
     }
 
 

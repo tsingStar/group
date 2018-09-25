@@ -26,21 +26,9 @@ class Group extends Model
     public static function formatGroupList($list)
     {
         foreach ($list as $item) {
-            $item['buyer_list'] = model('Order')->alias('a')->join('User b', "a.user_id=b.id")->field('b.avatar')->select();
-//            $item['buyer_list'] = [
-//                [
-//                    'avatar' => "https://wx.qlogo.cn/mmopen/vi_32/lahrxb0oKdD5yJK3HTciaKWbZlruWTDRTT2J5HvBkqV7e8JicuFVsUzvkdjiaSXTO7jr9ibRDT3T7xJwkMFP6FR39Q/132",
-//                ],
-//                [
-//                    'avatar' => "https://wx.qlogo.cn/mmopen/vi_32/lahrxb0oKdD5yJK3HTciaKWbZlruWTDRTT2J5HvBkqV7e8JicuFVsUzvkdjiaSXTO7jr9ibRDT3T7xJwkMFP6FR39Q/132",
-//                ],
-//                [
-//                    'avatar' => "https://wx.qlogo.cn/mmopen/vi_32/lahrxb0oKdD5yJK3HTciaKWbZlruWTDRTT2J5HvBkqV7e8JicuFVsUzvkdjiaSXTO7jr9ibRDT3T7xJwkMFP6FR39Q/132",
-//                ]
-//            ];
+            $item['buyer_list'] = model('Order')->alias('a')->join('User b', "a.user_id=b.id")->where('a.group_id', $item['group_id'])->group("a.user_id")->field('b.avatar')->select();
             $product_list = model('GroupProduct')->where('group_id', $item['group_id'])->field("id, leader_id, header_group_id, group_id, header_product_id, product_name, commission, market_price, group_price, group_limit, self_limit, product_desc")->order('ord')->select();
             foreach ($product_list as $value) {
-//                $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->select();
                 $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
             }
             $item['product_list'] = $product_list;

@@ -317,9 +317,9 @@ function get_millisecond()
 /**
  * Excel一键导出
  */
-function excel($header, $data, $filename)
+function excel($header, $data, $filename, $num=1, $extraTitle)
 {
-    $error = \Excel::export($header, $data, $filename, '2007');
+    $error = \Excel::export($header, $data, $filename, '2007', $num, $extraTitle);
     return $error;
 }
 

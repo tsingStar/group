@@ -16,12 +16,21 @@ use think\Log;
 
 class Pub extends Controller
 {
+    /**
+     * 下载军团销售记录
+     */
+    public function getGroupData()
+    {
+//        $group_id = input("group_id");
+        /**
+         *
+         */
+        
+    }
 
     public function test()
     {
-        $group_id = 57;
-        $group_list = model("GroupProduct")->where("header_group_id", $group_id)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id")->select();
-        print_r($group_list);
+        echo md5("yxt666Y");
 
     }
 
@@ -48,6 +57,7 @@ class Pub extends Controller
         }
         $session_key = $res['session_key'];
         $open_id = $res['openid'];
+        Log::error($open_id);
 
         $os = db('os')->where('open_id', $open_id)->find();
         if ($os) {
@@ -81,6 +91,7 @@ class Pub extends Controller
             'province' => $province,
             'country' => $country
         ];
+        Log::error($data);
         if (!$open_id) {
             exit_json(-1, '登陆失败');
         }

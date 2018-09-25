@@ -424,7 +424,7 @@ class Leader extends Controller
             ];
             $model->where($where);
         }
-        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace")->limit($page * $page_num, $page_num)->select();
+        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace")->order("a.create_time desc")->limit($page * $page_num, $page_num)->select();
         foreach ($list as $item) {
             $order_no = $item['order_no'];
             $item['product_list'] = model('OrderDet')->getOrderPro($order_no);
@@ -501,7 +501,8 @@ class Leader extends Controller
                     "num" => $num,
                     "group_price" => $product['group_price'],
                     "product_name" => $product['product_name'],
-                    "reason" => $reason
+                    "reason" => $reason,
+                    "refund_no"=>getOrderNo()
                 ]);
 //                $product->save(["back_num" => $num, "status" => 1]);
                 $product->save(["status" => 1]);
@@ -537,7 +538,7 @@ class Leader extends Controller
         }
         $list = $model->where("leader_id", $this->leader_id)->where('status', 2)->field("id, title, pick_status")->limit($page * $page_num, $page_num)->select();
         foreach ($list as $item) {
-            $temp = model("OrderDet")->where('group_id', $item['id'])->group("product_id")->field("sum(num) sum_num, group_price, product_name")->select();
+            $temp = model("OrderDet")->alias("a")->join("GroupProduct b", "a.product_id=b.id")->where('a.group_id', $item['id'])->group("a.product_id")->field("sum(a.num) sum_num, a.group_price, a.product_name, b.commission")->select();
             $item['product_list'] = $temp;
             $t = model("Order")->where('group_id', $item['id'])->field("sum(order_money) sum_money, sum(refund_money) sum_refund")->find();
             $item['sum_money'] = $t['sum_money'];
@@ -643,7 +644,6 @@ class Leader extends Controller
         }
     }
 
-
     /**
      * 提现
      * @throws Exception
@@ -730,6 +730,110 @@ class Leader extends Controller
             exit_json(-1, $sms->getError());
         }
     }
+
+    /**
+     * 获取余额列表
+     */
+    public function getMoneyLog()
+    {
+        $type_arr = [
+            "1" => "团购佣金结算",
+            "2" => "退款佣金冲减",
+            "3" => "提现冲减",
+            "4" => "提现手续费"
+        ];
+        $page = input("page");
+        $page_num = input("page_num");
+        $list = model("LeaderMoneyLog")->where("leader_id", $this->leader_id)->field("id, type, money, order_no, create_time")->limit($page * $page_num, $page_num)->order("create_time desc")->select();
+        foreach ($list as $item) {
+            $item["type_desc"] = $type_arr[$item["type"]];
+        }
+        exit_json(1, "请求成功", $list);
+    }
+
+    /**
+     * 获取余额变动明细
+     */
+    public function getMoneyLogDetail()
+    {
+        $log_id = input("id");
+        $detail = model("LeaderMoneyLog")->where("id", $log_id)->find();
+        switch ($detail["type"]) {
+            case 1:
+                $header_group = model("Group")->where("id", $detail["order_no"])->find();
+                $product_list = model("GroupProduct")->where("group_id", $detail["order_no"])->field("product_name, commission, sell_num, group_price")->select();
+                exit_json(1, "", $product_list);
+                break;
+            case 2:
+                $refund = model("OrderRefund")->where("order_no", $detail["order_no"])->find();
+                $data = [
+                    "product_name" => $refund["product_name"],
+                    "group_price" => $refund["group_price"],
+                    "num" => $refund["num"]
+                ];
+                $product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
+                $data["commission"] = $product["commission"];
+                $order = model("Order")->where("order_no", $refund["order_no"])->find();
+                $data["order_no"] = $order["order_no"];
+                $data["user_name"] = $order["user_name"];
+                $data["user_telephone"] = $order["user_telephone"];
+                $data["create_time"] = $refund["create_time"];
+                $data["opera_time"] = $refund["update_time"];
+                $group = model("Group")->alias("a")->join("User b", "a.leader_id=b.id")->where("a.id", $refund["group_id"])->field("a.*, b.user_name, b.telephone")->find();
+                $data["title"] = $group["title"];
+                $data["leader_name"] = $group["user_name"];
+                $data["telephone"] = $group["telephone"];
+                $data["remarks"] = $refund["remarks"];
+                break;
+            default:
+                exit_json(-1, "明细不存在");
+        }
+    }
+
+    /**
+     * 获取上次团购地址
+     */
+    public function getLastAddress()
+    {
+        $group = model("Group")->where("leader_id", $this->leader_id)->where("pick_type", 1)->order("create_time desc")->find();
+        $address = $group["pick_address"];
+        exit_json(1, "请求成功", ["address"=>$address]);
+    }
+
+    /**
+     * 获取当前团购订单
+     */
+    public function getGroupOrder()
+    {
+        $group_id = input("group_id");
+        $page = input('page');
+        $page_num = input('page_num');
+        $model = model("Order")->alias("a")->join("User b", "a.user_id=b.id")->join("Group c", "a.group_id=c.id");
+        $model->where("a.leader_id", $this->leader_id)->where("a.group_id", $group_id);
+        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace")->limit($page * $page_num, $page_num)->select();
+        foreach ($list as $item) {
+            $order_no = $item['order_no'];
+            $product_list = model('OrderDet')->alias("a")->join("GroupProduct b", "a.product_id=b.id")->where("a.order_no", $order_no)->field("a.*, b.commission")->select();
+            $commission = 0;
+            $plist = [];
+            foreach ($product_list as $value){
+                $commission += $value["commission"]/100*($value["num"]-$value["back_num"])*$value["group_price"];
+                $t = [];
+                $t["product_name"] = $value["product_name"];
+                $t["num"] = $value["num"];
+                $t["back_num"] = $value["back_num"];
+                $t["group_price"] = $value["group_price"];
+                $t["commission"] = $value["commission"];
+                $plist[] = $t;
+            }
+            $commission = round($commission, 2);
+//            $item["order_money"] = $item["order_money"]-$item["refund_money"];
+            $item["commission"] = $commission;
+            $item["product_list"] = $plist;
+        }
+        exit_json(1, '请求成功', $list);
+    }
+
 
 
 }

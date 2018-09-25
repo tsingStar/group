@@ -31,7 +31,11 @@ class Order extends Model
         foreach ($product_list as $item){
             //军团商品处理
             $hgp = \model("HeaderGroupProduct")->where("id", $item['header_product_id'])->find();
-            $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$hgp['remain']-$item['num']]);
+            if($hgp["remain"] !=-1){
+                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$hgp['remain']-$item['num']]);
+            }else{
+                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
+            }
             //团购商品处理
             \model('GroupProduct')->where('id', $item['product_id'])->setInc('sell_num', $item['num']);
         }
