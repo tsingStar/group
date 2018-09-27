@@ -98,7 +98,7 @@ class Header extends Controller
                     'product_name' => $item['product_name'],
                     'header_group_id' => $group_id,
                     'base_id' => $base_id,
-                    'remain' => $item['remain']?$item['remain']:-1,
+                    'remain' => $item['remain'] ? $item['remain'] : -1,
                     'commission' => $item['commission'],
                     'purchase_price' => $item['purchase_price'],
                     'market_price' => $item['market_price'],
@@ -129,7 +129,8 @@ class Header extends Controller
                 foreach ($group_list as $val) {
                     $g_product = model("GroupProduct")->where([
                         'header_group_id' => $group_id,
-                        'header_product_id' => $product_id
+                        'header_product_id' => $product_id,
+                        "leader_id"=>$val["leader_id"]
                     ])->find();
                     if ($g_product) {
                         $g_product->allowField(true)->save($product_data);
@@ -327,6 +328,7 @@ class Header extends Controller
         $product_list = model('HeaderGroupProduct')->where('header_group_id', $group_id)->field('id, product_name, remain, sell_num, commission, market_price, group_price, product_desc')->order('ord')->select();
         foreach ($product_list as $item) {
             $item['img_list'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
+            $item["remain"] = $item["remain"] == -1 ? "无限" : $item["remain"];
         }
         $group['product_list'] = $product_list;
         exit_json(1, '请求成功', $group);
@@ -429,7 +431,7 @@ class Header extends Controller
                 exit_json(-1, '权限错误');
             }
             $data->save(['status' => 1]);
-            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name"=>$data["name"]]);
+            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name" => $data["name"]]);
             exit_json();
         } else {
             exit_json(-1, '申请记录不存在或已处理');

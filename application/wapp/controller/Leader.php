@@ -326,10 +326,10 @@ class Leader extends Controller
         }
         //获取显示状态
         $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
-        if(!$config){
-            db("HeaderConfig")->insert(["header_id"=>$group["header_id"]]);
+        if (!$config) {
+            db("HeaderConfig")->insert(["header_id" => $group["header_id"]]);
             $show = 1;
-        }else{
+        } else {
             $show = $config["sale_detail_show"];
         }
         $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
@@ -502,7 +502,7 @@ class Leader extends Controller
                     "group_price" => $product['group_price'],
                     "product_name" => $product['product_name'],
                     "reason" => $reason,
-                    "refund_no"=>getOrderNo()
+                    "refund_no" => getOrderNo()
                 ]);
 //                $product->save(["back_num" => $num, "status" => 1]);
                 $product->save(["status" => 1]);
@@ -715,6 +715,14 @@ class Leader extends Controller
     {
         $order_no = input("order_no");
         $order = model("Order")->where("order_no", $order_no)->find();
+        if (!$order) {
+            exit_json(-1, "订单不存在");
+        }
+
+        if ($order["send_num"] >= 2) {
+            exit_json(-1, "短信通知咱最多支持两条");
+        }
+
         $phone = [
             $order["user_telephone"]
         ];
@@ -725,6 +733,7 @@ class Leader extends Controller
         $sms = new SendSms($phone, "9374132");
         $res = $sms->sendTemplate($param);
         if ($res) {
+            $order->setInc("send_num");
             exit_json();
         } else {
             exit_json(-1, $sms->getError());
@@ -797,7 +806,7 @@ class Leader extends Controller
     {
         $group = model("Group")->where("leader_id", $this->leader_id)->where("pick_type", 1)->order("create_time desc")->find();
         $address = $group["pick_address"];
-        exit_json(1, "请求成功", ["address"=>$address]);
+        exit_json(1, "请求成功", ["address" => $address]);
     }
 
     /**
@@ -816,8 +825,8 @@ class Leader extends Controller
             $product_list = model('OrderDet')->alias("a")->join("GroupProduct b", "a.product_id=b.id")->where("a.order_no", $order_no)->field("a.*, b.commission")->select();
             $commission = 0;
             $plist = [];
-            foreach ($product_list as $value){
-                $commission += $value["commission"]/100*($value["num"]-$value["back_num"])*$value["group_price"];
+            foreach ($product_list as $value) {
+                $commission += $value["commission"] / 100 * ($value["num"] - $value["back_num"]) * $value["group_price"];
                 $t = [];
                 $t["product_name"] = $value["product_name"];
                 $t["num"] = $value["num"];
@@ -834,6 +843,26 @@ class Leader extends Controller
         exit_json(1, '请求成功', $list);
     }
 
+
+    /**
+     * 获取团购汇总
+     */
+    public function getGroupTotal()
+    {
+        $id = input("group_id");//团购
+        $value = model("GroupProduct")->where("group_id", $id)->field("sell_num, product_name, group_price, commission")->select();
+        $sum_money = 0;
+        $commission_money = 0;
+        foreach ($value as $item){
+            $sum_money += $item["sell_num"]*$item["group_price"];
+            $commission_money += $item["sell_num"]*$item["group_price"]*$item["commission"]/100;
+        }
+        $data["product_list"] = $value;
+        $data["sum_money"] = round($sum_money, 2);
+        $data["commission_money"] = round($commission_money, 2);
+        exit_json(1, "请求成功", $data);
+
+    }
 
 
 }

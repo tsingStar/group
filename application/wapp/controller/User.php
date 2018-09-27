@@ -113,15 +113,15 @@ class User extends Controller
             exit_json(-1, '当前团购不存在');
         }
         $lr = db("LeaderRecord")->where("user_id", $this->user["id"])->find();
-        if($lr){
-            db("LeaderRecord")->where(["user_id"=>$this->user["id"]])->update(["leader_id"=>$group["leader_id"]]);
-        }else{
-            db("LeaderRecord")->insert(["user_id"=>$this->user["id"], "leader_id"=>$group["leader_id"]]);
+        if ($lr) {
+            db("LeaderRecord")->where(["user_id" => $this->user["id"]])->update(["leader_id" => $group["leader_id"]]);
+        } else {
+            db("LeaderRecord")->insert(["user_id" => $this->user["id"], "leader_id" => $group["leader_id"]]);
         }
         $uv = db("Uv")->where("user_id", $this->user["id"])->where("group_id", $group_id)->find();
-        if(!$uv){
-            db("Uv")->insert(["user_id"=>$this->user["id"], "group_id"=>$group_id]);
-            $group->save(["scan_num"=>$group["scan_num"]+1]);
+        if (!$uv) {
+            db("Uv")->insert(["user_id" => $this->user["id"], "group_id" => $group_id]);
+            $group->save(["scan_num" => $group["scan_num"] + 1]);
         }
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price')->order('ord')->select();
         foreach ($product_list as $value) {
@@ -130,10 +130,10 @@ class User extends Controller
 
         //获取显示状态
         $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
-        if(!$config){
-            db("HeaderConfig")->insert(["header_id"=>$group["header_id"]]);
+        if (!$config) {
+            db("HeaderConfig")->insert(["header_id" => $group["header_id"]]);
             $show = 1;
-        }else{
+        } else {
             $show = $config["sale_detail_show"];
         }
         $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
@@ -169,13 +169,35 @@ class User extends Controller
     public function getGroupRecord()
     {
         $group_id = input('group_id');
+        $group = model("Group")->where("id", $group_id)->find();
+        if (!$group) {
+            exit_json(-1, "团购不存在");
+        }
         $page = input('page');
         $page_num = input('page_num');
-        $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
-        foreach ($record_list as $l) {
-            $l['product_num'] = model('OrderDet')->where('order_no', $l['order_no'])->sum('num');
+        //是否显示这个军团
+        $sale_record = db("HeaderConfig")->where("header_id", $group["header_id"])->value("sale_record_show");
+        if ($sale_record == 1) {
+            $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.header_group_id', $group["header_group_id"])->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
+            $order_sum = model("Order")->where("header_group_id", $group["header_group_id"])->count();
+            foreach ($record_list as $l) {
+                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
+                $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num-back_num sum_num")->select();
+            }
+        } else {
+            $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
+            $order_sum = model("Order")->where("group_id", $group_id)->count();
+            foreach ($record_list as $l) {
+                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
+                $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num sum_num")->select();
+            }
+
         }
-        exit_json(1, '请求成功', $record_list);
+        $data = [
+            "order_sum" => $order_sum,
+            "record_list" => $record_list
+        ];
+        exit_json(1, '请求成功', $data);
     }
 
     /**
@@ -189,6 +211,7 @@ class User extends Controller
         $product = model('GroupProduct')->where('id', $product_id)->find();
         $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
         $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
+        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
 
         //军团库存数量
         if ($header_product['remain'] != -1 && $header_product['remain'] < $header_product['sell_num'] + $num) {
@@ -196,7 +219,7 @@ class User extends Controller
         }
 
         //团员限购
-        if ($product['self_limit'] > 0 && $product['self_limit'] < $num) {
+        if ($product['self_limit'] > 0 && $product['self_limit'] < $self_num + $num) {
             exit_json(-1, '商品个人限购' . $product['self_limit'] . '件');
         }
 
@@ -227,6 +250,13 @@ class User extends Controller
         $user_telephone = input('user_telephone');
         $remarks = input('remarks');
         $product_list = input('product_list/a');
+        $product_list = array_filter($product_list, function ($item){
+            if($item["num"] == 0){
+                return false;
+            }else{
+                return true;
+            }
+        });
         $order_money = 0;
         foreach ($product_list as $item) {
             $order_money += $item['group_price'] * $item['num'];
@@ -310,10 +340,10 @@ class User extends Controller
         $page = input("page");
         $access_token = $this->getAccessToken();
         $ch = curl_init();
-        $url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=".$access_token;
+        $url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=" . $access_token;
         $post_data = [
-            "scene"=>$scene,
-            "page"=>$page
+            "scene" => $scene,
+            "page" => $page
         ];
         curl_setopt($ch, CURLOPT_URL, $url);
         // 执行后不直接打印出来
@@ -321,7 +351,7 @@ class User extends Controller
         // 设置请求方式为post
         curl_setopt($ch, CURLOPT_POST, true);
         // post的变量
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
         // 请求头，可以传数组
 //        curl_setopt($ch, CURLOPT_HEADER, $header);
         // 跳过证书检查
@@ -330,7 +360,14 @@ class User extends Controller
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         $output = curl_exec($ch);
         curl_close($ch);
-        exit_json(1, "请求成功", ["data"=>$output]);
+        $path = __UPLOAD__ . '/erweima/';
+        is_dir($path) or mkdir($path, "0777");
+        $file = md5(get_millisecond()) . ".png";
+        $f = fopen($path . $file, "w");
+        fwrite($f, $output);
+        fclose($f);
+        $output = __URL__ . "/upload/erweima/" . $file;
+        exit_json(1, "请求成功", ["data" => $output]);
 
     }
 
@@ -347,7 +384,7 @@ class User extends Controller
             if (!isset($res["access_token"])) {
                 return false;
             } else {
-                cache("access_token", $res["access_token"]);
+                cache("access_token", $res["access_token"], $res["expires_in"]);
                 return $res["access_token"];
             }
         }

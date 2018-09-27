@@ -21,17 +21,51 @@ class Pub extends Controller
      */
     public function getGroupData()
     {
-//        $group_id = input("group_id");
-        /**
-         *
-         */
-        
-    }
-
-    public function test()
-    {
-        echo md5("yxt666Y");
-
+        $group_id = input("group_id");
+        //军团信息
+        $data = model("OrderDet")->where("header_group_id", $group_id)->field("product_name, sum(num-back_num) product_num")->group("header_product_id")->select();
+        $temp1 = [];
+        foreach ($data as $val){
+            $temp1[] = [
+                $val["product_name"],
+                $val["product_num"]
+            ];
+        }
+        $leaders = model("OrderDet")->where("header_group_id", $group_id)->field("leader_id")->group("leader_id")->select();
+        //团长订单
+        $data1 = [];
+        foreach ($leaders as $value) {
+            $temp = model("OrderDet")->alias("a")->join("User b", "a.leader_id=b.id", "left")->join("Group c", "c.id=a.group_id", "left")->where("a.leader_id", $value['leader_id'])->where("a.header_group_id", $group_id)->field("a.product_name, sum(a.num-a.back_num) product_num, a.leader_id, b.user_name, b.name, b.telephone, c.pick_address, c.pick_type")->group("product_id")->select();
+            foreach ($temp as $item) {
+                if ($item["pick_type"] == 2) {
+                    $address = db("HeaderPickAddress")->where("id", $item["pick_address"])->find();
+                    $item["pick_address"] = $address["address"] . " " . $address["address_det"];
+                }
+                $data1[] = [
+                    $item["product_name"],
+                    $item["product_num"],
+                    $item["user_name"],
+                    $item["name"],
+                    $item["telephone"],
+                    $item["pick_address"]
+                ];
+            }
+        }
+        $header = [
+            ["商品名称", "商品数量"],
+            ["商品名称", "商品数量", "团长昵称", "团长姓名", "联系方式", "取货地址"]
+        ];
+        $body = [
+            $temp1,
+            $data1
+        ];
+        $extraTitle = [
+            "军团销售汇总",
+            "团长销售汇总"
+        ];
+        $group = model("HeaderGroup")->where("id", $group_id)->find();
+        echo excel($header, $body, $group["close_time"], count($header), $extraTitle);
+        exit;
     }
 
     protected function _initialize()
@@ -56,8 +90,9 @@ class Pub extends Controller
             exit_json(-1, $res['errmsg']);
         }
         $session_key = $res['session_key'];
-        $open_id = $res['openid'];
+        $open_id = $res['openid'];        
         Log::error($open_id);
+
 
         $os = db('os')->where('open_id', $open_id)->find();
         if ($os) {
@@ -146,7 +181,7 @@ class Pub extends Controller
     {
         $name = input('name');
         $password = input('password');
-        $header = model('Header')->where(['name' => $name, 'password' => md5($password)])->field('id header_id, name, nick_name, head_image, amount_able+amount_lock amount, amount_able')->find();
+        $header = model('Header')->where(['name' => $name, 'password' => md5($password)])->field('id header_id, name, nick_name, head_image, amount_able+amount_lock amount, amount_able')->find();//where(['name' => $name, 'password' => md5($password)])
         if ($header) {
             exit_json(1, '登陆成功', $header);
         } else {
