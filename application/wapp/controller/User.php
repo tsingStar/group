@@ -23,13 +23,15 @@ class User extends Controller
     protected function _initialize()
     {
         parent::_initialize();
-        $user_id = input('user_id');
-        if (!$user_id) {
-            exit_json(-1, '用户不存在，请重新登陆');
-        } else {
-            $this->user = \app\common\model\User::get($user_id);
-            if (!$this->user) {
+        if(request()->action() != "getPickQrcode"){
+            $user_id = input('user_id');
+            if (!$user_id) {
                 exit_json(-1, '用户不存在，请重新登陆');
+            } else {
+                $this->user = \app\common\model\User::get($user_id);
+                if (!$this->user) {
+                    exit_json(-1, '用户不存在，请重新登陆');
+                }
             }
         }
 
@@ -181,14 +183,16 @@ class User extends Controller
             $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.header_group_id', $group["header_group_id"])->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
             $order_sum = model("Order")->where("header_group_id", $group["header_group_id"])->count();
             foreach ($record_list as $l) {
-                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
-                $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num-back_num sum_num")->select();
+                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num) num');
+//                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
+                $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num sum_num")->select();
             }
         } else {
             $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
             $order_sum = model("Order")->where("group_id", $group_id)->count();
             foreach ($record_list as $l) {
-                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
+//                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
+                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num) num');
                 $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num sum_num")->select();
             }
 
