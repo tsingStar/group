@@ -1,6 +1,5 @@
 {include file='pub/header'/}
 <title>新增商品</title>
-<link href="__STATIC__/lib/webuploader/0.1.5/webuploader.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div class="page-container">
@@ -19,8 +18,7 @@
                         <td>展示类型</td>
                         <td>展示内容</td>
                         <td>
-                            <button class="btn btn-primary radius" type="button" onclick="addSwiper()"
-                                    ondblclick="addSwiper()">添加
+                            <button class="btn btn-primary radius" type="button" onclick="addSwiper()">添加
                             </button>
                         </td>
                     </tr>
@@ -49,7 +47,6 @@
 
 </body>
 {include file="pub/footer"/}
-<script type="text/javascript" src="__STATIC__/lib/webuploader/0.1.5/webuploader.min.js"></script>
 <script>
     // 商品展示处理js
     function addSwiper() {
@@ -61,10 +58,9 @@
             '                            </select>\n' +
             '                        </td>\n' +
             '                        <td>\n' +
-            // '                            <input type="file" name="swiper[]" title="选择图片" accept="image/*">\n' +
             '                            <span class="btn-upload form-group">\n' +
-            '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
-            '                  <input type="file" accept="image/*" name="swiper[]" class="input-file">\n' +
+            '                  <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 选择图片</a>\n' +
+            '                  <input type="file" accept="image/*" onchange="uploadFile(this, \'swiper[]\')" class="input-file">\n' +
             '                </span>\n' +
             '                        </td>\n' +
             '                        <td>\n' +
@@ -78,17 +74,15 @@
         let type = $(o).val();
         let _input;
         if (type == 1) {
-            // _input = '<input type="file" name="swiper[]" title="选择图片" accept="image/*">';
             _input = '<span class="btn-upload form-group">\n' +
-                '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
-                '                  <input type="file" name="swiper[]" class="input-file" accept="image/*">\n' +
+                '                  <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 选择图片</a>\n' +
+                '                  <input type="file" class="input-file" onchange="uploadFile(this, \'swiper[]\')" accept="image/*">\n' +
                 '                </span>';
         } else {
             _input = '<span class="btn-upload form-group">\n' +
-                '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
-                '                  <input type="file" name="swiper[]" class="input-file" accept="video/mp4">\n' +
+                '                  <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 选择视频</a>\n' +
+                '                  <input type="file" onchange="uploadFile(this, \'swiper[]\')" class="input-file" accept="video/mp4">\n' +
                 '                </span>';
-            // _input = '<input type="file" name="swiper[]" title="选择视频" accept="video/mp4">';
         }
         $(o).parent().next('td').html(_input);
     }
@@ -108,7 +102,7 @@
             submitHandler: function (form) {
                 $(form).ajaxSubmit(function (res) {
                     if (res.code == 1) {
-                        location.reload();
+                        parent.location.reload();
                     } else {
                         layer.msg(res.msg);
                     }

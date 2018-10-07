@@ -218,7 +218,7 @@ class User extends Controller
         $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
 
         //军团库存数量
-        if ($header_product['remain'] != -1 && $header_product['remain'] < $header_product['sell_num'] + $num) {
+        if ($header_product['remain'] != -1 && $header_product['remain'] < $num) {
             exit_json(-1, '商品库存不足');
         }
 

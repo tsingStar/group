@@ -66,6 +66,7 @@ class WeiXinPay
         $inputObj->SetTotal_fee($order['total_money'] * 100);
         $inputObj->SetRefund_fee($order['refund_money'] * 100);
         $inputObj->SetOp_user_id($order['shop_id']);
+        $inputObj->SetRefundDesc($order['refund_desc']);
         try {
             $result = \WxPayApi::refund($inputObj);
             Log::error('微信退款记录' . json_encode($result));

@@ -9,9 +9,8 @@
 namespace app\header\controller;
 
 
-use think\Controller;
 
-class Leader extends Controller
+class Leader extends ShopBase
 {
     protected function _initialize()
     {
@@ -24,7 +23,7 @@ class Leader extends Controller
     public function applyList()
     {
 
-        $list = model('ApplyLeaderRecord')->where('header_id', session(config('headerKey')))->select();
+        $list = model('ApplyLeaderRecord')->where('header_id', session(config('headerKey')))->paginate(10);
         $this->assign('list', $list);
         return $this->fetch();
     }

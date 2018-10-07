@@ -5,16 +5,18 @@
 <div>
     <div class="page-container">
         <div class="text-c">
-            团购名称：<input type="text" name="" id="" placeholder="团购名称" style="width:250px" class="input-text">
-            <button class="btn btn-success" type="submit"><i class="Hui-iconfont">&#xe665;</i> 查询
-            </button>
+            <form action="" method="get">
+                团购名称：<input type="text" name="group_title" value="{$param.group_title || default=''}" id="" placeholder="团购名称" style="width:250px" class="input-text">
+                <button class="btn btn-success" type="submit"><i class="Hui-iconfont">&#xe665;</i> 查询
+                </button>
+            </form>
         </div>
         <div class="cl pd-5 bg-1 bk-gray mt-20">
-            <span class="l">
-                <a class="btn btn-primary radius" onclick="create_group('创建新团','{:url(\'add\')}')" href="javascript:;">
-                    <i class="Hui-iconfont">&#xe600;</i> 创建新团
-                </a>
-            </span>
+            <!--<span class="l">-->
+                <!--<a class="btn btn-primary radius" onclick="create_group('创建新团','{:url(\'add\')}')" href="javascript:;">-->
+                    <!--<i class="Hui-iconfont">&#xe600;</i> 创建新团-->
+                <!--</a>-->
+            <!--</span>-->
             <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
                href="javascript:location.replace(location.href);" title="刷新">
                 <i class="Hui-iconfont">&#xe68f;</i>
@@ -28,7 +30,6 @@
                         <th width="100">团购名称</th>
                         <th width="100">团购公告</th>
                         <th width="100">团长取货方式</th>
-                        <th width="100">是否允许团长结束</th>
                         <th width="100">自动结团时间</th>
                         <th width="100">创建时间</th>
                         <th width="100">开团时间</th>
@@ -50,11 +51,6 @@
                         {:config('dispatch_type')[$item.dispatch_type]}
                     </td>
                     <td>
-                        <div class="switch switch-small" data-on-label="是" data-off-label="否">
-                            <input type="checkbox" value="{$item.id}" onchange="test()" class="my_switch" {if $item.is_close}checked{/if} {if $item.status gt 0}disabled{/if}/>
-                        </div>
-                    </td>
-                    <td>
                         {$item.close_time}
                     </td>
                     <td>
@@ -68,18 +64,21 @@
                     </td>
                     <td class="td-manage">
                         <a style="text-decoration:none" class="ml-5"
-                           onClick="group_edit('团购编辑','{:url(\'Product/edit\', [\'product_id\'=>$item.id])}')"
+                           onClick="group_edit('{$item.id}')"
                            href="javascript:;" title="编辑">
                             <i class="Hui-iconfont Hui-iconfont-edit"></i>团购编辑
                         </a>
-                        <a style="text-decoration:none" class="ml-5" onClick="product_del(this,'{$item.id}')"
-                           href="javascript:;" title="编辑商品">
-                            <i class="Hui-iconfont Hui-iconfont-edit"></i>编辑商品
+                        {if $item.status eq 0}
+                        <a style="text-decoration:none" class="ml-5"
+                           onClick="group_start('{$item.id}')"
+                           href="javascript:;" title="开启">
+                            <i class="Hui-iconfont Hui-iconfont-edit"></i>开启团购
                         </a>
-                        <a style="text-decoration:none" class="ml-5" onClick="product_del(this,'{$item.id}')"
-                           href="javascript:;" title="删除团购">
-                            <i class="Hui-iconfont">&#xe6e2;</i>删除团购
-                        </a>
+                        {/if}
+                        <!--<a style="text-decoration:none" class="ml-5" onClick="product_del(this,'{$item.id}')"-->
+                           <!--href="javascript:;" title="删除团购">-->
+                            <!--<i class="Hui-iconfont">&#xe6e2;</i>删除团购-->
+                        <!--</a>-->
                     </td>
                 </tr>
                 {/foreach}
@@ -93,15 +92,25 @@
 {include file='pub/footer'/}
 <script type="text/javascript">
     // $('.table-sort').dataTable();
-    //创建团购
-    function create_group(){
-        layer.alert('创建团购');
-        return;
-        layer_show('创建团购', "{:url('add_group')}");
+    function group_edit(group_id){
+        var index = layer.open({
+            type:2,
+            title:'团购编辑',
+            content:'{:url(\'Group/edit\')}?group_id='+group_id
+        });
+        layer.full(index);
     }
 
-    function test(){
-        console.log('sdfsdf');
+    function group_start(group_id){
+        layer.confirm("确认开启团购？", function () {
+            $.post("{:url('Group/start')}", {group_id:group_id}, function(res){
+                if(res.code == 1){
+                    location.reload();
+                }else{
+                    layer.msg(res.msg);
+                }
+            })
+        });
     }
 </script>
 </body>

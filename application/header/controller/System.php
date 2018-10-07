@@ -24,21 +24,44 @@ class System extends ShopBase
     public function wApp()
     {
         $w_app = model('WappConfig')->where('header_id', session(config('headerKey')))->find();
-        if(request()->isAjax()){
+        if (request()->isAjax()) {
             $data = $_POST;
-            if($w_app){
+            if ($w_app) {
                 $res = $w_app->allowField(true)->save($data);
-            }else{
+            } else {
                 $data['header_id'] = session(config('leaderKey'));
                 $res = model('WappConfig')->save($data);
             }
-            if($res){
+            if ($res) {
                 exit_json();
-            }else{
-                exit_json(-1,'操作失败');
+            } else {
+                exit_json(-1, '操作失败');
             }
         }
         $this->assign('w_app', $w_app);
+        return $this->fetch();
+    }
+
+    /**
+     * 平台参数设置
+     */
+    public function headerConfig()
+    {
+        if (request()->isAjax()) {
+            $data = input("post.");
+            $res = db("HeaderConfig")->where("header_id", HEADER_ID)->update($data);
+            if ($res) {
+                exit_json();
+            } else {
+                exit_json(-1, "设置失败，请重试");
+            }
+        }
+        $con = db("HeaderConfig")->where("header_id", HEADER_ID)->find();
+        if(!$con){
+            db("HeaderConfig")->insert(["header_id"=>HEADER_ID]);
+            $con = db("HeaderConfig")->find(["header_id"=>HEADER_ID]);
+        }
+        $this->assign("con", $con);
         return $this->fetch();
     }
 

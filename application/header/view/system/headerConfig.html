@@ -1,0 +1,51 @@
+{include file="pub/header"}
+<title>添加目录</title>
+</head>
+<body>
+<article class="page-container">
+    <form action="" method="post" class="form form-horizontal" id="form1">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>团购统计：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <label><input type="radio" name="sale_detail_show" value="1" {if $con.sale_detail_show eq 1}checked{/if}>&nbsp;显示</label>
+                <label><input type="radio" name="sale_detail_show" value="0" {if $con.sale_detail_show eq 0}checked{/if}>&nbsp;不显示</label>
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-3"><span class="c-red">*</span>军团/团购销售记录：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <label><input type="radio" name="sale_record_show" value="1" {if $con.sale_record_show eq 1}checked{/if}>&nbsp;显示</label>
+                <label><input type="radio" name="sale_record_show" value="0" {if $con.sale_record_show eq 0}checked{/if}>&nbsp;不显示</label>
+            </div>
+        </div>
+        <div class="row cl">
+            <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-3">
+                <input class="btn btn-primary radius" type="submit" value="&nbsp;&nbsp;保存&nbsp;&nbsp;">
+            </div>
+        </div>
+    </form>
+</article>
+
+{include file="pub/footer" /}
+
+<!--请在下方写此页面业务相关的脚本-->
+<script type="text/javascript">
+    $(function () {
+        $("form").validate({
+            submitHandler: function (form) {
+                $(form).ajaxSubmit(function (res) {
+                    if (1 == res.code) {
+                        location.reload();
+                    } else {
+                        layer.msg(res.msg, {icon: 5, time: 1000});
+                    }
+                });
+            }
+        });
+    });
+
+
+</script>
+<!--/请在上方写此页面业务相关的脚本-->
+</body>
+</html>

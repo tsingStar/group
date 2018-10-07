@@ -11,6 +11,7 @@ namespace app\header\controller;
 
 
 use think\Controller;
+use think\Log;
 
 class Pub extends Controller
 {
@@ -33,26 +34,27 @@ class Pub extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    function login(){
-        if(request()->isAjax()){
+    function login()
+    {
+        if (request()->isAjax()) {
             $name = input('post.uname');
             $password = input('post.password');
             $remember = input('post.online');
             $shop = model('Header')->where('name', $name)->where('password', md5($password))->find();
-            if($shop){
-                if(!$shop['enable']){
+            if ($shop) {
+                if (!$shop['enable']) {
                     exit_json(-1, '账号被禁止使用，请联系管理员');
                 }
-                if($remember){
+                if ($remember) {
                     cookie('header_id', $shop['id']);
                     cookie('header_pwd', $shop['password']);
                 }
                 session(config('headerKey'), $shop['id']);
                 exit_json(200, '登陆成功');
-            }else{
+            } else {
                 exit_json(-1, '用户名或密码错误');
             }
-        }else{
+        } else {
             return view('login');
         }
     }
@@ -72,6 +74,25 @@ class Pub extends Controller
         }
     }
 
+    /**
+     * 上传文件
+     */
+    public function uploadFile()
+    {
+        $img_url = uploadFile("file");
+        $file_info = pathinfo($img_url);
+        $extension = $file_info["extension"];
+        $img_arr = ["jpg", "jpeg", "gif", "png", "bmp"];
+        $video_arr = ["mp4", "avi", "rmvb"];
+        if(in_array($extension, $img_arr)){
+            $type = 1;
+        }else if(in_array($extension, $video_arr)){
+            $type = 2;
+        }else{
+            $type = 3;
+        }
+        exit_json(1, "上传成功", ["type"=>$type, "url" => $img_url]);
+    }
 
 
 }

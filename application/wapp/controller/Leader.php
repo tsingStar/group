@@ -418,6 +418,7 @@ class Leader extends Controller
         if (is_numeric($pick_status)) {
             $model->where("a.pick_status", $pick_status);
         }
+        $model->where("c.status", 2);
         if ($keywords) {
             $where = [
                 "c.title|a.user_telephone|a.user_name" => ["like", "%$keywords%"],
@@ -653,13 +654,23 @@ class Leader extends Controller
      */
     public function withDraw()
     {
-        $header = model("Leader")->where("id", $this->leader_id)->find();
+        $token = input("token");
+        if (!cache($this->leader_id . "token" . '2') || $token != cache($this->leader_id . "token" . '2')) {
+            exit_json(-1, "请求非法");
+        } else {
+            cache($this->leader_id . "token" . '2', null);
+        }
+
+        $header = model("User")->where("id", $this->leader_id)->find();
         if (!$header["open_id"]) {
             exit_json(2, "账户未绑定微信号");
         }
         $amount = input("money");
-        if (!$amount || $amount < 10) {
+        if (!is_numeric($amount) || !$amount || $amount < 10) {
             exit_json(-1, "提现金额不合法");
+        }
+        if ($amount > $header["amount_able"]) {
+            exit_json(-1, "可提现余额不足");
         }
         //计算提现手续费及实际到账金额
         $rate = 0.006;
@@ -843,6 +854,32 @@ class Leader extends Controller
         exit_json(1, '请求成功', $list);
     }
 
+    /**
+     * 获取当前团购团购订单new
+     */
+    public function getGroupOrderNew()
+    {
+        $group_id = input("group_id");
+        $keywords = input('keywords'); //高级搜索关键字
+        $page = input('page');
+        $page_num = input('page_num');
+        $model = model("Order")->alias("a")->join("User b", "a.user_id=b.id")->join("Group c", "a.group_id=c.id");
+        $model->where("a.leader_id", $this->leader_id);
+        $model->where("c.id", $group_id);
+        if ($keywords) {
+            $where = [
+                "c.title|a.user_telephone|a.user_name" => ["like", "%$keywords%"],
+            ];
+            $model->where($where);
+        }
+        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace")->order("a.create_time desc")->limit($page * $page_num, $page_num)->select();
+        foreach ($list as $item) {
+            $order_no = $item['order_no'];
+            $item['product_list'] = model('OrderDet')->getOrderPro($order_no);
+        }
+        exit_json(1, '请求成功', $list);
+    }
+
 
     /**
      * 获取团购汇总
@@ -853,9 +890,9 @@ class Leader extends Controller
         $value = model("GroupProduct")->where("group_id", $id)->field("sell_num, product_name, group_price, commission")->select();
         $sum_money = 0;
         $commission_money = 0;
-        foreach ($value as $item){
-            $sum_money += $item["sell_num"]*$item["group_price"];
-            $commission_money += $item["sell_num"]*$item["group_price"]*$item["commission"]/100;
+        foreach ($value as $item) {
+            $sum_money += $item["sell_num"] * $item["group_price"];
+            $commission_money += $item["sell_num"] * $item["group_price"] * $item["commission"] / 100;
         }
         $data["product_list"] = $value;
         $data["sum_money"] = round($sum_money, 2);

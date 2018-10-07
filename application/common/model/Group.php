@@ -43,7 +43,7 @@ class Group extends Model
     public function getGroupDetail($group_id)
     {
         $item = [];
-        $temp = model("OrderDet")->where('group_id', $group_id)->group("product_id")->field("sum(num) sum_num, group_price, product_name")->select();
+        $temp = model("OrderDet")->where('group_id', $group_id)->group("product_id")->field("sum(num-back_num) sum_num, group_price, product_name")->select();
         $item['product_list'] = $temp;
         $t = model("Order")->where('group_id', $group_id)->field("sum(order_money) sum_money, sum(refund_money) sum_refund")->find();
         $item['sum_money'] = is_null($t['sum_money'])?0:$t['sum_money'];

@@ -18,15 +18,14 @@
                         <td>展示类型</td>
                         <td>展示内容</td>
                         <td>
-                            <button class="btn btn-primary radius" type="button" onclick="addSwiper()"
-                                    ondblclick="addSwiper()">添加
+                            <button class="btn btn-primary radius" type="button" onclick="addSwiper()">添加
                             </button>
                         </td>
                     </tr>
                     {foreach $swiper_list as $swiper}
                         <tr class="text-c">
                             <td>
-                                <select name="swiper_type[]">
+                                <select onchange="changeSwiper(this)">
                                     <option value="1" {if $swiper.type eq 1}selected{/if}>图片</option>
                                     <option value="2" {if $swiper.type eq 2}selected{/if}>视频</option>
                                 </select>
@@ -37,16 +36,22 @@
                                 {/if}
 
                                 {if $swiper.type eq 2}
-                                <video src="{$swiper.url}" width="300px;" height="300px;" controls></video>
+                                <video src="{$swiper.url}" width="120px;" height="120px;" controls></video>
                                 {/if}
+
                                 <span class="btn-upload form-group">
-                                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>
-                                  <input type="file" name="swiper[]" class="input-file">
+                                  <a href="javascript:;" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i>{if $swiper.type eq 1}选择图片{else/}选择视频{/if}</a>
+                                    <input type="hidden" name="swiper[]" value="{$swiper.url}"/>
+                                    {if $swiper.type eq 1}
+                                    <input type="file" class="input-file" onchange="uploadFile(this, 'swiper[]')" accept="image/*">
+                                    {/if}
+                                    {if $swiper.type eq 2}
+                                    <input type="file" class="input-file" onchange="uploadFile(this, 'swiper[]')" accept="video/*">
+                                    {/if}
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-primary radius" type="button" onclick="addSwiper()"
-                                        ondblclick="delTd(this)">删除
+                                <button class="btn btn-primary radius" type="button" onclick="delTd(this)">删除
                                 </button>
                             </td>
                         </tr>
@@ -81,16 +86,15 @@
     function addSwiper() {
         let _html = '<tr class="text-c">\n' +
             '                        <td>\n' +
-            '                            <select name="swiper_type[]" class="select-box" onchange="changeSwiper(this)">\n' +
+            '                            <select class="select-box" onchange="changeSwiper(this)">\n' +
             '                                <option value="1">图片</option>\n' +
             '                                <option value="2">视频</option>\n' +
             '                            </select>\n' +
             '                        </td>\n' +
             '                        <td>\n' +
-            // '                            <input type="file" name="swiper[]" title="选择图片" accept="image/*">\n' +
             '                            <span class="btn-upload form-group">\n' +
-            '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
-            '                  <input type="file" accept="image/*" name="swiper[]" class="input-file">\n' +
+            '                  <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 选择图片</a>\n' +
+            '                  <input type="file" accept="image/*" onchange="uploadFile(this, \'swiper[]\')" class="input-file">\n' +
             '                </span>\n' +
             '                        </td>\n' +
             '                        <td>\n' +
@@ -104,17 +108,15 @@
         let type = $(o).val();
         let _input;
         if (type == 1) {
-            // _input = '<input type="file" name="swiper[]" title="选择图片" accept="image/*">';
             _input = '<span class="btn-upload form-group">\n' +
-                '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
-                '                  <input type="file" name="swiper[]" class="input-file" accept="image/*">\n' +
+                '                  <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 选择图片</a>\n' +
+                '                  <input type="file" class="input-file" onchange="uploadFile(this, \'swiper[]\')" accept="image/*">\n' +
                 '                </span>';
         } else {
             _input = '<span class="btn-upload form-group">\n' +
-                '                  <input class="input-text upload-url radius" type="text" readonly><a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 浏览文件</a>\n' +
-                '                  <input type="file" name="swiper[]" class="input-file" accept="video/mp4">\n' +
+                '                  <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-search"></i> 选择视频</a>\n' +
+                '                  <input type="file" onchange="uploadFile(this, \'swiper[]\')" class="input-file" accept="video/mp4">\n' +
                 '                </span>';
-            // _input = '<input type="file" name="swiper[]" title="选择视频" accept="video/mp4">';
         }
         $(o).parent().next('td').html(_input);
     }

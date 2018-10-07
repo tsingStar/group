@@ -34,12 +34,18 @@ class PayResult extends Controller
         file_put_contents($log_path . DS . date("Y-m-d") . ".txt", date("H:m:s") . json_encode($_POST) . "\r\n", FILE_APPEND);
         if ($_POST['result_code'] == 'SUCCESS') {
             $weixin = new WeiXinPay();
-            $validRes = $weixin->chargeNotify();
-            if ($validRes === false) {
-                Log::error('签名错误');
-            }
-            $orderInfo = $this->formatRes($validRes);
-
+//            $validRes = $weixin->chargeNotify();
+//            if ($validRes === false) {
+//                Log::error('签名错误');
+//            }
+//            $orderInfo = $this->formatRes($validRes);
+            //测试
+            $orderInfo=[
+                "out_trade_no"=>"201809281034337134443",
+                "total_money"=>6,
+                "trade_no"=>"1231513123123"
+            ];
+            //测试
             model('OrderPre')->startTrans();
             model('Order')->startTrans();
             model('OrderDet')->startTrans();

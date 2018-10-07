@@ -17,8 +17,12 @@
                     <th width="60">姓名</th>
                     <th width="100">联系方式</th>
                     <th width="100">地址</th>
-                    <th width="100">是否做过团长</th>
-                    <th width="100">其他备注</th>
+                    <th width="100">小区名称</th>
+                    <th width="100">小区户数</th>
+                    <th width="100">是否有自己的邻居群</th>
+                    <th width="100">是否有销售经验</th>
+                    <th width="100">业务时间</th>
+                    <th width="100">其他</th>
                     <th width="100">申请时间</th>
                     <th width="100">是否已处理</th>
                     <th width="100">操作</th>
@@ -31,13 +35,39 @@
                     <td>{$item.telephone}</td>
                     <td>{$item.address}</td>
                     <td>
-                        {if $item.is_group eq 1}
+                        {if $item.residential eq 1}
                             是
                         {else}
                             否
                         {/if}
                     </td>
-                    <td>{$item.remarks}</td>
+                    <td>{$item.neighbours}</td>
+                    <td>
+                        {if $item.have_group eq 1}
+                        是
+                        {else}
+                        否
+                        {/if}
+                    </td>
+                    <td>
+                        {if $item.have_sale eq 1}
+                        是
+                        {else}
+                        否
+                        {/if}
+                    </td>
+                    <td>
+                        {if $item.work_time eq 0}
+                        每天
+                        {elseif $item.work_time eq 1}
+                        周末
+                        {else/}
+                        空余时间
+                        {/if}
+                    </td>
+                    <td>
+                        {$item.other}
+                    </td>
                     <td>{$item.create_time}</td>
                     <td>
                         {if $item.status eq 1}
@@ -61,16 +91,17 @@
                 {/foreach}
                 </tbody>
             </table>
+            {$list->render()}
         </div>
     </div>
 </div>
 
 {include file='pub/footer'/}
 <script type="text/javascript">
-    $('.table-sort').dataTable({
-        "ordering": false,//是否开启排序
-        "bStateSave": true,//状态保存
-    });
+    // $('.table-sort').dataTable({
+    //     "ordering": false,//是否开启排序
+    //     "bStateSave": true,//状态保存
+    // });
 
     /**
      * 确认申请

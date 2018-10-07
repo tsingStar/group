@@ -1,0 +1,596 @@
+{include file='pub/header'/}
+<title>编辑军团</title>
+<style>
+    ul li {
+        margin-top: 5px;
+    }
+</style>
+</head>
+<body>
+<div class="page-container">
+    <form class="form form-horizontal" id="form-product-add" enctype="multipart/form-data" method="post">
+        <input type="hidden" name="group_id" value="{$group.id}">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>军团标题：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" value="{$group.group_title}" disabled placeholder="" name="group_title" required>
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">军团公告：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" value="{$group.group_notice}" disabled name="group_notice">
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>团长取货方式：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <label>
+                    <input type="radio" name="dispatch_type" value="1" disabled {if $group.dispatch_type eq 1}checked="checked"{/if} class="checkbox"
+                           onclick="showDispatchInfo(this.value)">配送
+                </label>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <label>
+                    <input type="radio" name="dispatch_type" value="2" disabled {if $group.dispatch_type eq 2}checked="checked"{/if} class="checkbox"
+                           onclick="showDispatchInfo(this.value)">自提
+                </label>
+                <ul class="dispatch_site" style="display: none; margin-top: 10px;">
+                    {foreach $address as $val}
+                    <li id="{$val.id}">
+                        <label><input type="radio" name="dispatch_site" disabled class="checkbox" {if $group.dispatch_info eq $val.id}checked="checked"{/if}><span>{$val.name}:{$val.address}&nbsp;{$val.address_det}</span></label>
+                        <button type="button" class="size-MINI btn btn-primary radius"
+                                onclick="addAddress('{$val.id}')">编辑
+                        </button>
+                        <button type="button" class="size-MINI btn btn-primary radius"
+                                onclick="delAddress('{$val.id}', this)">删除
+                        </button>
+                    </li>
+                    {/foreach}
+                </ul>
+                <button type="button" class="size-MINI btn btn-primary radius dispatch_site" style="display: none;"
+                        onclick="addAddress(0)">添加自提点
+                </button>
+            </div>
+        </div>
+
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>允许团长结束团购：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <label><input type="radio" value="1" disabled {if $group.is_close eq 1}checked="checked"{/if} name="is_close">&nbsp;允许</label>
+                <label><input type="radio" value="0" disabled {if $group.is_close eq 2}checked="checked"{/if} checked="checked" name="is_close">&nbsp;不允许</label>
+            </div>
+        </div>
+
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>自动结团时间：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" disabled onfocus="WdatePicker({startDate: '%y-%M-%d HH:mm' ,dateFmt:'yyyy-MM-dd HH:mm'})"
+                       name="close_time" value="{$group.close_time}" class="input-text Wdate"/>
+            </div>
+        </div>
+
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>商品列表：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <table class="table table-border table-bordered text-c">
+                    <tr class="text-c">
+                        <th>商品名称</th>
+                        <th>团限购</th>
+                        <th>团员限购</th>
+                        <th>进货价</th>
+                        <th>市场价</th>
+                        <th>团购价</th>
+                        <th>佣金比例</th>
+                        <th>库存</th>
+                        <th width="200">操作</th>
+                    </tr>
+                    {foreach $product_list as $item}
+                    <tr class="text-c product">
+                        <input type="hidden" name="id" value="{$item.id}"/>
+                        <input type="hidden" name="base_id" value="{$item.base_id}"/>
+                        <td class="product_name">{$item.product_name}</td>
+                        <td class="group_limit">
+                            <input type="text" class="input-text" value="{$item.group_limit}">
+                        </td>
+                        <td class="self_limit">
+                            <input type="text" class="input-text" value="{$item.self_limit}">
+                        </td>
+                        <td class="purchase_price">
+                            <input type="text" class="input-text" value="{$item.purchase_price}">
+                        </td>
+                        <td class="market_price">
+                            <input type="text" class="input-text" value="{$item.market_price}">
+                        </td>
+                        <td class="group_price">
+                            <input type="text" class="input-text" value="{$item.group_price}">
+                        </td>
+                        <td class="commission">
+                            <input type="text" class="input-text" value="{$item.commission}">
+                        </td>
+                        <td class="remain">
+                            <input type="text" class="input-text" value="{$item.remain}">
+                        </td>
+                        <td>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this, '{$group.status}')">上移</a>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this,  '{$group.status}')">下移</a>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this,  '{$group.status}', '{$item.id}')">删除</a>
+                        </td>
+                    </tr>
+                    {/foreach}
+                    <tr class="text-c product_add">
+                        <td colspan="9"><a href="JavaScript:;" class="btn btn-primary radius"
+                                           onclick="addProduct(this)">添加商品</a></td>
+                    </tr>
+                    <!--<tr class="product">
+                        <td>
+                            <table class="table table-border table-bordered">
+                                <tr>
+                                    <td>商品名称</td>
+                                    <td class="text-r">
+                                        <a href="javascript:;" class="btn btn-primary radius"
+                                           onclick="moveUp(this)">上移</a>
+                                        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>
+                                        <a href="javascript:;" class="btn btn-primary radius"
+                                           onclick="moveDel(this)">删除</a>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        团限购
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        团员限购
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        进货价
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        市场价
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        团购价
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>
+                                        佣金比例
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>
+                                        库存
+                                    </td>
+                                    <td>
+                                        <input type="text" class="input-text">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>
+                                        图片
+                                    </td>
+                                    <td>
+                                        <img src="" style="width: 120px; height: 120px;"/>
+                                        <img src="" style="width: 120px; height: 120px;"/>
+                                        <img src="" style="width: 120px; height: 120px;"/>
+                                        <img src="" style="width: 120px; height: 120px;"/>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>
+                                        描述
+                                    </td>
+                                    <td>
+                                        <textarea class="textarea"></textarea>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr class="text-c">
+                        <td>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="addProduct(this)">添加商品</a>
+                        </td>
+                    </tr>-->
+                </table>
+            </div>
+        </div>
+        <div class="row cl">
+            <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-2">
+                {if $group.status neq 2}
+                <button class="btn btn-secondary radius" type="button" onclick="saveGroup('{$group.status}')">
+                    保存团购
+                </button>
+                {/if}
+                {if $group.status eq 0}
+                <button class="btn btn-success radius" type="button" onclick="saveGroup(1)">
+                    立即开团
+                </button>
+                {/if}
+                <button class="btn btn-success radius" type="button" onclick="layer_close()">
+                    取消
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+</body>
+{include file="pub/footer"/}
+<script type="text/javascript">
+
+    $(function(){
+        let dispatch_type = $("input[name='dispatch_type']:checked").val();
+        showDispatchInfo(dispatch_type);
+    });
+
+    function saveGroup(status) {
+        // status  0 保存团购  1 立即开团
+        var data = {};
+        data["status"] = status;
+        data["group_id"] = $("input[name='group_id']").val();
+        var group_title = $.trim($("input[name='group_title']").val());
+        if (group_title == "") {
+            layer.msg("军团标题不能为空");
+            return;
+        }
+        data["group_title"] = group_title;
+        data["group_notice"] = $.trim($("input[name='group_notice']").val());
+        var dispatch_type = $("input[name='dispatch_type']:checked").val();
+        if (dispatch_type == 1) {
+            data["dispatch_type"] = 1;
+            data["dispatch_info"] = "";
+        } else if (dispatch_type == 2) {
+            data["dispatch_type"] = 2;
+            var dispatch_info = $("input[name='dispatch_site']:checked").parent().parent().attr("id");
+            if (typeof dispatch_info != "number" && dispatch_info > 0) {
+                data["dispatch_info"] = dispatch_info;
+            } else {
+                layer.msg("自提点未选择");
+                return;
+            }
+        } else {
+            layer.msg("参数错误");
+            return;
+        }
+        data["is_close"] = $("input[name='is_close']:checked").val();
+        var close_time = $("input[name='close_time']").val();
+        if (close_time == "") {
+            layer.msg("自动结团时间不能为空");
+            return;
+        }
+        data["close_time"] = close_time;
+        var product_list = $(".product");
+        var pro_arr = new Array();
+        $.each(product_list, function (i, v) {
+            //校验商品合法性
+            var pro = {};
+            var a = $(v).find(".product_name").html();
+            pro["product_name"] = a;
+            var b = $(v).find(".group_limit").find("input").val();
+            pro["group_limit"] = b;
+            var c = $(v).find(".self_limit").find("input").val();
+            pro["self_limit"] = c;
+            var d = $(v).find(".purchase_price").find("input").val();
+            pro["purchase_price"] = d;
+            var e = $(v).find(".market_price").find("input").val();
+            pro["market_price"] = e;
+            var f = $(v).find(".group_price").find("input").val();
+            pro["group_price"] = f;
+            var g = $(v).find(".commission").find("input").val();
+            pro["commission"] = g;
+            var h = $(v).find(".remain").find("input").val();
+            pro["remain"] = h;
+            var base_id = $(v).find("input[name='base_id']").val();
+            var id = $(v).find("input[name='id']").val();
+            pro["base_id"] = base_id;
+            pro["id"] = id;
+            pro_arr.push(pro);
+        });
+        if (pro_arr.length == 0) {
+            layer.msg("商品不能为空");
+            return;
+        }
+        data["product_list"] = pro_arr;
+        $.post("{:url('Group/applyGroup')}", data, function (res) {
+            if (res.code == 1) {
+                layer.alert("保存成功",function () {
+                    parent.location.reload();
+                    layer_close();
+                });
+            } else {
+                layer.msg(res.msg);
+            }
+        });
+    }
+
+    /**
+     * 显示自提信息
+     */
+    function showDispatchInfo(val) {
+        if (val == 1) {
+            $(".dispatch_site").hide();
+        }
+        if (val == 2) {
+            $(".dispatch_site").show();
+        }
+    }
+
+    /**
+     * 添加自提点信息
+     */
+    function addAddress(aid) {
+        layer_show("添加自提点信息", "{:url('Group/address')}?aid=" + aid, "600", "600");
+    }
+
+    function delAddress(aid, o) {
+        var index = layer.confirm("确认删除自提点？", function (res) {
+            $.post("{:url('Group/delAddress')}", {aid: aid}, function (res) {
+                if (res.code == 1) {
+                    $(o).parent().remove();
+                    layer.close(index);
+                } else {
+                    layer.msg(res.msg);
+                }
+            });
+        })
+    }
+
+    function setAddress(data) {
+        var ul = $(".dispatch_site").eq(0);
+        var site = ul.find("#" + data.id);
+        if (site.length == 0) {
+            ul.append('<li id="' + data.id + '">\n' +
+                '                        <label><input type="radio" name="dispatch_site" class="checkbox"><span>' + data.name + ':' + data.address + ' ' + data.address_det + '</span></label>\n' +
+                '                        <button type="button" class="size-MINI btn btn-primary radius" onclick="addAddress(\'' + data.id + '\')">编辑</button>\n' +
+                '<button type="button" class="size-MINI btn btn-primary radius" onclick="delAddress(\'' + data.id + '\', this)">删除</button>' +
+                '                    </li>')
+        } else {
+            site.find("label span").html(data.name + ":" + data.address + " " + data.address_det);
+        }
+    }
+
+
+    // var _product = `<tr class="product">
+    //                     <td>
+    //                         <table class="table table-border table-bordered">
+    //                             <tr>
+    //                                 <td>商品名称</td>
+    //                                 <td class="text-r">
+    //                                     <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>
+    //                                     <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>
+    //                                     <a href="javascript:;" class="btn btn-primary radius"  onclick="moveDel(this)">删除</a>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //                             <tr>
+    //                                 <td>
+    //                                     团限购
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //                             <tr>
+    //                                 <td>
+    //                                     团员限购
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //                             <tr>
+    //                                 <td>
+    //                                     进货价
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //                             <tr>
+    //                                 <td>
+    //                                     市场价
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //                             <tr>
+    //                                 <td>
+    //                                     团购价
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //
+    //                             <tr>
+    //                                 <td>
+    //                                     佣金比例
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //
+    //                             <tr>
+    //                                 <td>
+    //                                     库存
+    //                                 </td>
+    //                                 <td>
+    //                                     <input type="text" class="input-text">
+    //                                 </td>
+    //                             </tr>
+    //
+    //                             <tr>
+    //                                 <td>
+    //                                     图片
+    //                                 </td>
+    //                                 <td>
+    //                                     <img src="" style="width: 120px; height: 120px;"/>
+    //                                     <img src="" style="width: 120px; height: 120px;"/>
+    //                                     <img src="" style="width: 120px; height: 120px;"/>
+    //                                     <img src="" style="width: 120px; height: 120px;"/>
+    //                                 </td>
+    //                             </tr>
+    //
+    //                             <tr>
+    //                                 <td>
+    //                                     描述
+    //                                 </td>
+    //                                 <td>
+    //                                     <textarea class="textarea"></textarea>
+    //                                 </td>
+    //                             </tr>
+    //                         </table>
+    //                     </td>
+    //                 </tr>`;
+    var _product = `<tr class="text-c product">
+                        <td class="product_name">新鲜橙子</td>
+                        <td class="group_limit">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td class="self_limit">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td class="purchase_price">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td class="market_price">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td class="group_price">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td class="commission">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td class="remain">
+                            <input type="text" class="input-text">
+                        </td>
+                        <td>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this)">删除</a>
+                        </td>
+                    </tr>`;
+
+    /**
+     * 添加商品
+     */
+    function addProduct(o) {
+        // $(o).parent().parent().before(_product);
+        layer_show("选择商品库商品", "{:url('Product/getHistory')}");
+    }
+
+    /**
+     * 删除商品
+     */
+    function moveDel(o, status, pid) {
+        var pro = getProduct(o);
+        let s = parseInt(status);
+        if( s> 0 && pid != 0){
+            layer.msg("军团已开启,商品不可删除");
+            return ;
+        }
+        if(pid != ""){
+            layer.confirm("确认删除此商品？", function () {
+                $.post("{:url('Group/delProduct')}", {id:pid}, function(res){
+                    if(res.code == 1){
+                        pro.remove();
+                    }else{
+                        layer.msg("删除失败");
+                    }
+                });
+            });
+        }else{
+            pro.remove();
+        }
+    }
+
+    /**
+     * 上移
+     * @param o
+     */
+    function moveUp(o, status) {
+        layer.msg("当前模式下不可移动");
+        return;
+        var pro = getProduct(o);
+        var pre_pro = pro.prev().prev();
+        if (pre_pro.length == 0) {
+            layer.msg("当前已是第一个");
+            return true;
+        }
+        pro.prev().before(pro.clone(true));
+        pro.remove();
+    }
+
+    /**
+     * 下移
+     * @param o
+     */
+    function moveDown(o, status) {
+        layer.msg("当前模式下不可移动");
+        return;
+        var pro = getProduct(o);
+        var pre_pro = pro.next();
+        if (pre_pro.next().length == 0) {
+            layer.msg("当前已是最后一个");
+            return true;
+        }
+        pre_pro.after(pro.clone(true));
+        pro.remove();
+    }
+
+    /**
+     * 获取当前点击商品
+     * @param o
+     * @returns {jQuery}
+     */
+    function getProduct(o) {
+        return $(o).parent().parent();
+    }
+
+    /**
+     * 保存选中商品
+     */
+    function saveProducts($products) {
+        var _html = "";
+        $.each($products, function (i, v) {
+            _html += '<tr class="text-c product"><input type="hidden" name="id" value="0"/><input type="hidden" name="base_id" value="' + v.base_id + '"/>    <td class="product_name">' + v.product_name + '</td>    <td class="group_limit">        <input type="text" class="input-text" value="' + v.group_limit + '">    </td>    <td class="self_limit">        <input type="text" class="input-text" value="' + v.self_limit + '">    </td>    <td class="purchase_price">        <input type="text" class="input-text" value="' + v.purchase_price + '">    </td>    <td class="market_price">        <input type="text" class="input-text" value="' + v.market_price + '">    </td>    <td class="group_price">        <input type="text" class="input-text" value="' + v.group_price + '">    </td>    <td class="commission">        <input type="text" class="input-text" value="' + v.commission + '">    </td>    <td class="remain">        <input type="text" class="input-text" value="' + v.remain + '">    </td>    <td>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this, 0, 0)">删除</a>    </td></tr>';
+        });
+        $(".product_add").before(_html);
+    }
+
+</script>
+</html>

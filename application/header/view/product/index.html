@@ -5,9 +5,11 @@
 <div>
     <div class="page-container">
         <div class="text-c">
-            商品名称：<input type="text" name="" id="" placeholder=" 商品名称" style="width:250px" class="input-text">
+            <form action="" method="get">
+            商品名称：<input type="text" name="product_name" value="{$param.product_name|default=''}" id="" placeholder=" 商品名称" style="width:250px" class="input-text">
             <button class="btn btn-success" type="submit"><i class="Hui-iconfont">&#xe665;</i> 搜商品
             </button>
+            </form>
         </div>
         <div class="cl pd-5 bg-1 bk-gray mt-20">
             <span class="l">
@@ -51,22 +53,24 @@
                 {/foreach}
                 </tbody>
             </table>
+            {$list->render()}
         </div>
     </div>
 </div>
 
 {include file='pub/footer'/}
 <script type="text/javascript">
-    $('.table-sort').dataTable();
+    // $('.table-sort').dataTable();
 
     /*产品-添加*/
     function product_add(title, url) {
         var index = layer.open({
             type: 2,
             title: title,
-            content: url
+            content: url,
+            area:["800px", "600px"]
         });
-        layer.full(index);
+        // layer.full(index);
     }
 
     /*产品-编辑*/
@@ -74,9 +78,10 @@
         var index = layer.open({
             type: 2,
             title: title,
-            content: url
+            content: url,
+            area:["800px", "600px"]
         });
-        layer.full(index);
+        // layer.full(index);
     }
 
     /*产品-删除*/

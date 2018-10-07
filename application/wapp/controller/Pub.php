@@ -196,13 +196,23 @@ class Pub extends Controller
     public function uploadImg()
     {
         $file = request()->file('file');
+        $order_no = input("order_no");
         if ($file) {
             $ext_array = ['jpg', 'jpeg', 'png', 'mp4', '3gp', 'avi'];
             $ext = $file->checkExt($ext_array);
             if (!in_array($ext, $ext_array)) {
                 exit_json(-1, '请上传有效格式的文件');
             }
-            $info = $file->move(__UPLOAD__);
+            if($order_no){
+                $saveName = $order_no;
+                $path = __URL__ . "/upload/" . $saveName.$ext;
+                if(file_exists($path)){
+                    exit_json(1, '操作成功', ["img_url" => $path]);
+                }
+            }else{
+                $saveName = true;
+            }
+            $info = $file->move(__UPLOAD__, $saveName);
             if ($info) {
                 $saveName = $info->getSaveName();
                 $path = __URL__ . "/upload/" . $saveName;
@@ -232,6 +242,18 @@ class Pub extends Controller
             exit_json(-1, '文件不存在');
         }
 
+    }
+
+    /**
+     * 获取当前请求token
+     */
+    public function getToken()
+    {
+        $user_id = input("user_id");
+        $role = input("type");
+        $token = md5(time().rand_string());
+        cache($user_id."token".$role, $token);
+        exit_json(1, "请求成功", $token);
     }
 
 

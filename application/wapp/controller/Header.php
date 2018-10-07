@@ -98,7 +98,7 @@ class Header extends Controller
                     'product_name' => $item['product_name'],
                     'header_group_id' => $group_id,
                     'base_id' => $base_id,
-                    'remain' => $item['remain'] ? $item['remain'] : -1,
+                    'remain' => ($item['remain'] >= 0 && is_numeric($item['remain'])) ? $item['remain'] : -1,
                     'commission' => $item['commission'],
                     'purchase_price' => $item['purchase_price'],
                     'market_price' => $item['market_price'],
@@ -130,7 +130,7 @@ class Header extends Controller
                     $g_product = model("GroupProduct")->where([
                         'header_group_id' => $group_id,
                         'header_product_id' => $product_id,
-                        "leader_id"=>$val["leader_id"]
+                        "leader_id" => $val["leader_id"]
                     ])->find();
                     if ($g_product) {
                         $g_product->allowField(true)->save($product_data);
@@ -483,12 +483,12 @@ class Header extends Controller
                 ]);
                 foreach ($group_list as $item) {
                     model("User")->where("id", $item["leader_id"])->setInc("amount_lock", $item["sum_money"]);
-                    model("LeaderMoneyLog")->isUpdate(false)->save([
+                    model("LeaderMoneyLog")->data([
                         "leader_id" => $item["leader_id"],
                         "type" => 1,
                         "money" => $item["sum_money"],
                         "order_no" => $item["group_id"]
-                    ]);
+                    ])->isUpdate(false)->save();
                 }
                 exit_json();
             } else {
@@ -649,7 +649,8 @@ class Header extends Controller
                     "refund_id" => $refund["refund_no"],
                     "total_money" => $order["order_money"],
                     "refund_money" => $refund_money,
-                    "shop_id" => $refund["leader_id"]
+                    "shop_id" => $refund["leader_id"],
+                    "refund_desc"=>"团购退款"
                 ];
                 Log::error($refund_order);
                 $res = $weixin->refund($refund_order);
@@ -663,11 +664,18 @@ class Header extends Controller
                     $product = model("OrderDet")->where("product_id", $refund["product_id"])->where("order_no", $refund["order_no"])->find();
 
                     //军团商品处理
-                    $header_product->save([
-                        "refund_num" => $header_product["refund_num"] + $refund["num"],
-                        "remain" => $header_product["remain"] + $refund["num"],
-                        "sell_num" => $header_product["sell_num"] - $refund["num"]
-                    ]);
+                    if($header_product["remain"] == -1){
+                        $header_product->save([
+                            "refund_num" => $header_product["refund_num"] + $refund["num"],
+                            "sell_num" => $header_product["sell_num"] - $refund["num"]
+                        ]);
+                    }else{
+                        $header_product->save([
+                            "refund_num" => $header_product["refund_num"] + $refund["num"],
+                            "remain" => $header_product["remain"] + $refund["num"],
+                            "sell_num" => $header_product["sell_num"] - $refund["num"]
+                        ]);
+                    }
                     //团购商品处理
                     $group_product->save([
                         "refund_num" => $group_product["refund_num"] + $refund["num"],
@@ -785,11 +793,24 @@ class Header extends Controller
      */
     public function withDraw()
     {
+        $token = input("token");
+        if(!cache($this->header_id."token".'1') || $token != cache($this->header_id."token".'1')){
+            exit_json(-1, "请求非法");
+        }else{
+            cache($this->header_id."token".'1', null);
+        }
+
         $header = model("Header")->where("id", $this->header_id)->find();
         if (!$header["open_id"]) {
             exit_json(2, "账户未绑定微信号");
         }
         $amount = input("money");
+        if(!is_numeric($amount) || $amount<=0){
+            exit_json(-1, "金额非法");
+        }
+        if($amount>$header["amount_able"]){
+            exit_json(-1, "可提现金额不足");
+        }
 //        if(!$amount || $amount<10){
 //            exit_json(-1, "提现金额不合法");
 //        }
