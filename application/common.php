@@ -342,6 +342,7 @@ function arr_unique($arr)
     return $list;
 }
 
+
 /**
  * 上传文件，支持单、多文件
  * @param $name
@@ -361,13 +362,9 @@ function uploadFile($name){
             $result_url = $file_url;
         }else{
             $info = $file->move(__UPLOAD__);
-            if(!$info){
-                $result_url = $file->getError();
-            }else{
-                $saveName = $info->getSaveName();
-                $path = __URL__."/upload/" . $saveName;
-                $result_url = $path;
-            }
+            $saveName = $info->getSaveName();
+            $path = __URL__."/upload/" . $saveName;
+            $result_url = $path;
         }
     }else{
         $result_url = false;

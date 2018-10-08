@@ -56,7 +56,7 @@ class Group extends ShopBase
     {
         $group_id = input("group_id");
         $group = HeaderGroup::get($group_id);
-        $product_list = HeaderGroupProduct::all(["header_group_id" => $group_id]);
+        $product_list = model("HeaderGroupProduct")->where(["header_group_id" => $group_id])->order("ord")->select();
         $this->assign("group", $group);
         $this->assign("product_list", $product_list);
         $this->assign("address", $this->getDispatchInfo());

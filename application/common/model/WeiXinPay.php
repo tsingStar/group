@@ -83,35 +83,97 @@ class WeiXinPay
     }
 
     /**
-     * 付款到用户
+     * 获取RSA公钥
+     */
+    public static function getPublicKey()
+    {
+        if (file_exists(__PUBLIC__ . "/public.pem")) {
+            $pub_key = file_get_contents(file_exists(__PUBLIC__ . "/public.pem"));
+            return $pub_key;
+        } else {
+            $f = fopen(__PUBLIC__ . "/public.pem", "w");
+        }
+        $inputObj = new \WxGetPublic();
+        try {
+            $result = \WxPayApi::getPublicKey($inputObj);
+            if ($result['return_code'] == "SUCCESS" && $result['result_code'] == "SUCCESS") {
+                $key = $result["pub_key"];
+                fwrite($f, $key);
+                fclose($f);
+                return $key;
+            } else {
+                Log::error("获取公钥失败：" . $result["err_code_des"]);
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error("获取公钥失败" . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 付款到微信零钱
      */
     public function withdraw($order)
     {
         $inputObj = new \WxMchPay();
         $inputObj->SetOpenid($order["open_id"]);
-        $inputObj->SetAmount($order["amount"]*100);
+        $inputObj->SetAmount($order["amount"] * 100);
         $inputObj->SetCheckName($order["check_name"]);
         $inputObj->SetDesc($order["desc"]);
         $inputObj->SetPartnerTradeNo($order["order_no"]);
-        try{
+        try {
             $result = \WxPayApi::mchPay($inputObj);
-            Log::error("企业付款记录".json_encode($result));
-            if($result['return_code'] == "SUCCESS" && $result['result_code'] == "SUCCESS"){
+            Log::error("企业付款到零钱记录" . json_encode($result));
+            if ($result['return_code'] == "SUCCESS" && $result['result_code'] == "SUCCESS") {
                 return $result;
-            }else{
-                Log::error("企业支付失败：".$result["err_code_des"]);
+            } else {
+                Log::error("企业支付失败：" . $result["err_code_des"]);
                 return false;
             }
 
-        }catch (\Exception $e){
-            Log::error("企业付款异常：".$e->getMessage());
+        } catch (\Exception $e) {
+            Log::error("企业付款异常：" . $e->getMessage());
             return false;
         }
+    }
 
+    /**
+     *
+     * 提现到银行卡
+     * @param array $order 提现基本信息
+     * @return bool|mixed
+     */
+    public function withdrawBank($order)
+    {
+        $pub_path = __PUBLIC__."/public.pem";
+        if(!file_exists($pub_path)){
+            WeiXinPay::getPublicKey();
+        }
+        $rsa = new \RSA($pub_path);
+        $true_name = $rsa->encrypt($order["true_name"], "base64", 4);
+        $bank_no = $rsa->encrypt($order["bank_no"], "base64", 4);
+        $inputObj = new \WxMchPayBank();
+        $inputObj->SetAmount($order["amount"] * 100);
+        $inputObj->SetDesc($order["desc"]);
+        $inputObj->SetPartnerTradeNo($order["order_no"]);
+        $inputObj->SetBankCode($order["bank_code"]);
+        $inputObj->SetBankNo($bank_no);
+        $inputObj->SetTrueName($true_name);
+        try {
+            $result = \WxPayApi::mchPayBank($inputObj);
+            Log::error("企业付款到银行卡记录" . json_encode($result));
+            if ($result['return_code'] == "SUCCESS" && $result['result_code'] == "SUCCESS") {
+                return $result;
+            } else {
+                Log::error("企业支付到银行卡失败：" . $result["err_code_des"]);
+                return false;
+            }
 
-
-
-        
+        } catch (\Exception $e) {
+            Log::error("企业付款到银行卡异常：" . $e->getMessage());
+            return false;
+        }
     }
 
 }

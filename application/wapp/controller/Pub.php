@@ -11,6 +11,7 @@ namespace app\wapp\controller;
 
 
 use app\common\model\ApplyHeaderRecord;
+use app\common\model\WeiXinPay;
 use think\Controller;
 use think\Log;
 
@@ -254,6 +255,25 @@ class Pub extends Controller
         $token = md5(time().rand_string());
         cache($user_id."token".$role, $token);
         exit_json(1, "请求成功", $token);
+    }
+
+    /**
+     * 获取银行列表
+     */
+    public function getBankList()
+    {
+        $bank_list = config("bank_list");
+        exit_json(1, "请求成功", $bank_list);
+    }
+
+    /**
+     * 获取RSA公钥
+     */
+    public function getPubKey()
+    {
+        echo WeiXinPay::getPublicKey();
+        exit;
+
     }
 
 

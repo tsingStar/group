@@ -22,11 +22,33 @@ class Interval extends Controller
     }
 
     /**
+     * 主定时入口
+     */
+    public function index()
+    {
+        ignore_user_abort(true);
+        set_time_limit(0);
+        echo "启动成功";
+        $i = 1;
+        while ($i<20){
+            file_get_contents("https://www.ybt9.com/wapp/Interval/closeGroup");
+            ob_flush();
+            flush();
+            sleep(1);
+            $i++;
+        }
+        exit();
+    }
+
+
+
+    /**
      * 定时结束军团
      */
     public function closeGroup()
     {
-        ignore_user_abort();
+        ignore_user_abort(true);
+        set_time_limit(0);
         $list = model("HeaderGroup")->where("UNIX_TIMESTAMP(close_time)<" . time())->where("status", 1)->select();
         try {
             foreach ($list as $key=>$value) {

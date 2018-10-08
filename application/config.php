@@ -256,16 +256,16 @@ return [
     'adminKey' => 'admin_id',
     'default_img' => __URL__ . '/default_img.jpg',
     'weixin' => [
-        'app_id'=>'wx867e1f8696515384',
-        'app_secret'=>'bcce7059af8f6a7457c17eabaa89c94c',
+        'app_id' => 'wx867e1f8696515384',
+        'app_secret' => 'bcce7059af8f6a7457c17eabaa89c94c',
         'mch_id' => "1490951862",   /*微信申请成功之后邮件中的商户id*/
         'api_key' => "50F97ECD3CE0A9C8232EA065C614AE71",    /*在微信商户平台上自己设定的api密钥 32位*/
         'cert_path' => __PUBLIC__ . '/apiclient_cert.pem',
         'key_path' => __PUBLIC__ . '/apiclient_key.pem'
     ],
-    'wapp'=>[
-        'app_id'=>'wx867e1f8696515384',
-        'app_secret'=>'bcce7059af8f6a7457c17eabaa89c94c'
+    'wapp' => [
+        'app_id' => 'wx867e1f8696515384',
+        'app_secret' => 'bcce7059af8f6a7457c17eabaa89c94c'
     ],
     //支付回调地址
     'notify_url' => __URL__ . '/admin/PayResult',
@@ -281,14 +281,33 @@ return [
     ],
     //基础配置参数
     //团购状态
-    'group_status'=>[
-        '0'=>'未开始',
-        '1'=>'进行中',
-        '2'=>'已结束'
+    'group_status' => [
+        '0' => '未开始',
+        '1' => '进行中',
+        '2' => '已结束'
     ],
     //团长取货方式
-    'dispatch_type'=>[
-        '1'=>'配送',
-        '2'=>'自提点取货'
+    'dispatch_type' => [
+        '1' => '配送',
+        '2' => '自提点取货'
+    ],
+    'bank_list' => [
+        ["code"=>"1002", "name"=> "工商银行"],
+        ["code"=>"1005", "name"=> "农业银行"],
+        ["code"=>"1026", "name"=> "中国银行"],
+        ["code"=>"1003", "name"=> "建设银行"],
+        ["code"=>"1001", "name"=> "招商银行"],
+        ["code"=>"1066", "name"=> "邮储银行"],
+        ["code"=>"1020", "name"=> "交通银行"],
+        ["code"=>"1004", "name"=> "浦发银行"],
+        ["code"=>"1006", "name"=> "民生银行"],
+        ["code"=>"1010", "name"=> "平安银行"],
+        ["code"=>"1009", "name"=> "兴业银行"],
+        ["code"=>"1021", "name"=> "中信银行"],
+        ["code"=>"1025", "name"=> "华夏银行"],
+        ["code"=>"1027", "name"=> "广发银行"],
+        ["code"=>"1022", "name"=> "光大银行"],
+        ["code"=>"1032", "name"=> "北京银行"],
+        ["code"=>"1056", "name"=> "宁波银行"],
     ],
 ];

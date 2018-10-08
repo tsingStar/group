@@ -464,7 +464,7 @@ class Leader extends Controller
         }
         $res1 = $order->save(['pick_status' => 1]);
         $res2 = model("OrderDet")->save(["status" => 3], ['status' => 0]);
-        if ($res1 && $res2) {
+        if ($res1) {
             exit_json();
         } else {
             exit_json(-1, '处理失败');

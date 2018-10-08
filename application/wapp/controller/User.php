@@ -394,5 +394,19 @@ class User extends Controller
         }
     }
 
+    /**
+     * 获取上次购买地址
+     */
+    public function getLastAddress()
+    {
+        $order = model("Order")->where("user_id", $this->user["id"])->order("create_time desc")->find();
+        $address = [
+            "user_name"=>$order["user_name"],
+            "user_telephone"=>$order["user_telephone"]
+        ];
+        exit_json(1, "请求成功", $address);
+
+    }
+
 
 }

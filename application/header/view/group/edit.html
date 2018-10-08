@@ -543,8 +543,11 @@
      * @param o
      */
     function moveUp(o, status) {
-        layer.msg("当前模式下不可移动");
-        return;
+        let s = parseInt(status);
+        if(s>0){
+            layer.msg("当前模式下不可移动");
+            return;
+        }
         var pro = getProduct(o);
         var pre_pro = pro.prev().prev();
         if (pre_pro.length == 0) {
@@ -560,8 +563,11 @@
      * @param o
      */
     function moveDown(o, status) {
-        layer.msg("当前模式下不可移动");
-        return;
+        let s = parseInt(status);
+        if(s>0){
+            layer.msg("当前模式下不可移动");
+            return;
+        }
         var pro = getProduct(o);
         var pre_pro = pro.next();
         if (pre_pro.next().length == 0) {

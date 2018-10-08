@@ -650,7 +650,7 @@ class Header extends Controller
                     "total_money" => $order["order_money"],
                     "refund_money" => $refund_money,
                     "shop_id" => $refund["leader_id"],
-                    "refund_desc"=>"团购退款"
+                    "refund_desc" => "团购退款"
                 ];
                 Log::error($refund_order);
                 $res = $weixin->refund($refund_order);
@@ -664,12 +664,12 @@ class Header extends Controller
                     $product = model("OrderDet")->where("product_id", $refund["product_id"])->where("order_no", $refund["order_no"])->find();
 
                     //军团商品处理
-                    if($header_product["remain"] == -1){
+                    if ($header_product["remain"] == -1) {
                         $header_product->save([
                             "refund_num" => $header_product["refund_num"] + $refund["num"],
                             "sell_num" => $header_product["sell_num"] - $refund["num"]
                         ]);
-                    }else{
+                    } else {
                         $header_product->save([
                             "refund_num" => $header_product["refund_num"] + $refund["num"],
                             "remain" => $header_product["remain"] + $refund["num"],
@@ -794,10 +794,10 @@ class Header extends Controller
     public function withDraw()
     {
         $token = input("token");
-        if(!cache($this->header_id."token".'1') || $token != cache($this->header_id."token".'1')){
+        if (!cache($this->header_id . "token" . '1') || $token != cache($this->header_id . "token" . '1')) {
             exit_json(-1, "请求非法");
-        }else{
-            cache($this->header_id."token".'1', null);
+        } else {
+            cache($this->header_id . "token" . '1', null);
         }
 
         $header = model("Header")->where("id", $this->header_id)->find();
@@ -805,17 +805,17 @@ class Header extends Controller
             exit_json(2, "账户未绑定微信号");
         }
         $amount = input("money");
-        if(!is_numeric($amount) || $amount<=0){
+        if (!is_numeric($amount) || $amount <= 0) {
             exit_json(-1, "金额非法");
         }
-        if($amount>$header["amount_able"]){
+        if ($amount > $header["amount_able"]) {
             exit_json(-1, "可提现金额不足");
         }
-//        if(!$amount || $amount<10){
-//            exit_json(-1, "提现金额不合法");
-//        }
+        if(!$amount || $amount<10){
+            exit_json(-1, "提现金额不合法");
+        }
         //计算提现手续费及实际到账金额
-        $rate = $header["rate"];
+        $rate = $header["rate"]/100;
         $fee = round($amount * $rate, 2);
         $money = $amount - $fee;
         $order_no = getOrderNo();
@@ -862,6 +862,114 @@ class Header extends Controller
             exit_json(-1, "提现操作失败");
         }
     }
+
+    /**
+     * 设置银行卡信息
+     */
+    public function setBankInfo()
+    {
+        $data = [
+            "bank_code" => input("bank_code"),
+            "true_name" => input("true_name"),
+            "bank_no" => input("bank_no"),
+            "header_id" => input("header_id")
+        ];
+        $bank = db("BankInfo")->where("header_id", $this->header_id)->find();
+        if ($bank) {
+            $res = db("BankInfo")->where("header_id", $this->header_id)->update($data);
+        } else {
+            $res = db("BankInfo")->insert($data);
+        }
+        if ($res) {
+            exit_json();
+        } else {
+            exit_json(-1, "设置失败");
+        }
+    }
+
+
+    /**
+     * 提现到银行卡
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function withDrawBank()
+    {
+        $token = input("token");
+
+        $header = model("Header")->where("id", $this->header_id)->find();
+        $bank = db("BankInfo")->where("header_id", $this->header_id)->find();
+        if (!$bank) {
+            exit_json(2, "账户尚未绑定银行卡");
+        }
+        if (!cache($this->header_id . "token" . '1') || $token != cache($this->header_id . "token" . '1')) {
+            exit_json(-1, "请求非法");
+        } else {
+            cache($this->header_id . "token" . '1', null);
+        }
+        $amount = input("money");
+        if (!is_numeric($amount) || $amount <= 0) {
+            exit_json(-1, "金额非法");
+        }
+        if ($amount > $header["amount_able"]) {
+            exit_json(-1, "可提现金额不足");
+        }
+//        if(!$amount || $amount<10){
+//            exit_json(-1, "提现金额不合法");
+//        }
+        //计算提现手续费及实际到账金额
+        $rate = $header["rate"]/100;
+        $fee = round($amount * $rate, 2);
+        $money = $amount - $fee;
+        $order_no = getOrderNo();
+        model("WithdrawLog")->save([
+            "role" => 1,
+            "user_id" => $this->header_id,
+            "amount" => $amount,
+            "fee" => $fee,
+            "money" => $money,
+            "status" => 0,
+            "order_no" => $order_no
+
+        ]);
+        $withdraw_id = model("WithdrawLog")->getLastInsID();
+        $log_model = model("WithdrawLog")->where("id", $withdraw_id)->find();
+        $weixin = new WeiXinPay();
+
+        $res = $weixin->withdrawBank([
+            "amount" => $money,
+            "bank_no" => $bank["bank_no"],
+            "bank_code"=>$bank["bank_code"],
+            "true_name"=>$bank["true_name"],
+            "desc" => "军团提现到银行卡到账",
+            "order_no" => $order_no
+        ]);
+        if (!is_bool($res)) {
+            $log_model->save(["withdraw_time" => date("Y-m-d H:i:s"), "status" => 1]);
+            $header->setDec("amount_able", $amount);
+            model("HeaderMoneyLog")->saveAll([
+                [
+                    "header_id" => $this->header_id,
+                    "type" => "3",
+                    "money" => $money,
+                    "order_no" => $order_no
+                ],
+                [
+                    "header_id" => $this->header_id,
+                    "type" => "4",
+                    "money" => $fee,
+                    "order_no" => $order_no
+                ]
+            ]);
+            exit_json();
+        } else {
+            exit_json(-1, "提现操作失败");
+        }
+    }
+
+
 
     /**
      * 绑定微信号
