@@ -9,10 +9,10 @@ $leftmenu = [
     [
         'navName'=>'系统设置',
         'navChild'=>[
-//            [
-//                'navName'=>'小程序参数',
-//                'url'=>'System/wApp'
-//            ],
+            [
+                'navName'=>'小程序参数',
+                'url'=>'System/wApp'
+            ],
             [
                 'navName'=>'平台设置',
                 'url'=>'System/headerConfig'
@@ -26,14 +26,14 @@ $leftmenu = [
                 'navName'=>'团长申请列表',
                 'url'=>'Leader/applyList'
             ],
-//            [
-//                'navName'=>'团长待审批',
-//                'url'=>'Leader/readyList'
-//            ],
-//            [
-//                'navName'=>'团长提现管理',
-//                'url'=>'Leader/withdrawList'
-//            ],
+            [
+                'navName'=>'团长待审批',
+                'url'=>'Leader/readyList'
+            ],
+            [
+                'navName'=>'团长提现管理',
+                'url'=>'Leader/withdrawList'
+            ],
         ]
     ],
 //    [
@@ -75,17 +75,17 @@ $leftmenu = [
             ],
         ]
     ],
-//    [
-//        'navName'=>'数据统计',
-//        'navChild'=>[
-//            [
-//                'navName'=>'产品销量',
-//                'url'=>'Sale/productCount'
-//            ],
-//            [
-//                'navName'=>'每期销售额',
-//                'url'=>'Sale/saleAmount'
-//            ],
-//        ]
-//    ],
+    [
+        'navName'=>'数据统计',
+        'navChild'=>[
+            [
+                'navName'=>'产品销量',
+                'url'=>'Sale/productCount'
+            ],
+            [
+                'navName'=>'每期销售额',
+                'url'=>'Sale/saleAmount'
+            ],
+        ]
+    ],
 ];
