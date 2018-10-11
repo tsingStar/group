@@ -10,6 +10,7 @@ namespace app\wapp\controller;
 
 
 use app\common\model\Group;
+use app\common\model\WeiXinPay;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -86,4 +87,6 @@ class Interval extends Controller
         }
         exit("ok");
     }
+
+
 }

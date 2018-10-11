@@ -32,7 +32,10 @@ class Order extends Model
             //军团商品处理
             $hgp = \model("HeaderGroupProduct")->where("id", $item['header_product_id'])->find();
             if($hgp["remain"] !=-1){
-                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$hgp['remain']-$item['num']]);
+//                $remain = $hgp['remain']-$item['num'];
+//                $remain = $remain<0?0:$remain;
+//                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$remain]);
+                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
             }else{
                 $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
             }

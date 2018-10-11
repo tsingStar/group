@@ -30,7 +30,7 @@ class Product extends ShopBase
         if (isset($param["product_name"])) {
             $model->whereLike("product_name", "%" . $param["product_name"] . "%");
         }
-        $list = $model->paginate(10);
+        $list = $model->order("id")->paginate(10);
         $this->assign('list', $list);
         $this->assign("param", $param);
         return $this->fetch();

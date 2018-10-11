@@ -26,6 +26,14 @@ class WeiXinPay
         $inputObj->SetTotal_fee($orderInfo['total_amount'] * 100);
         $inputObj->SetNotify_url($notify_url);
         $inputObj->SetTrade_type($orderInfo['trade_type']);
+        if (isset($orderInfo["time_start"])) {
+            //是否设置订单支付开始时间
+            $inputObj->SetTime_start($orderInfo["time_start"]);
+        }
+        if (isset($orderInfo["time_expire"])) {
+            //是否设置订单有效期
+            $inputObj->SetTime_expire($orderInfo["time_expire"]);
+        }
         if ($orderInfo['trade_type'] == "JSAPI") {
             $inputObj->SetOpenid($orderInfo['open_id']);
         }
@@ -146,9 +154,11 @@ class WeiXinPay
      */
     public function withdrawBank($order)
     {
-        $pub_path = __PUBLIC__."/public.pem";
-        if(!file_exists($pub_path)){
-            WeiXinPay::getPublicKey();
+        $pub_path = __PUBLIC__ . "/public.pem";
+        if (!file_exists($pub_path)) {
+//            WeiXinPay::getPublicKey();
+            Log::error("公钥文件不存在");
+            return false;
         }
         $rsa = new \RSA($pub_path);
         $true_name = $rsa->encrypt($order["true_name"], "base64", 4);
@@ -174,6 +184,51 @@ class WeiXinPay
             Log::error("企业付款到银行卡异常：" . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     *
+     * 订单查询
+     * @param $order_no
+     * @return bool
+     */
+    public function orderQuery($order_no)
+    {
+        $inputObj = new \WxPayOrderQuery();
+        $inputObj->SetOut_trade_no($order_no);
+        try {
+            $result = \WxPayApi::orderQuery($inputObj);
+            if ($result['return_code'] == "SUCCESS" && $result['result_code'] == "SUCCESS") {
+                if ($result["trade_state"] == "SUCCESS" || $result["trade_state"] == "USERPAYING") {
+                    return true; //用户已支付或处在支付过程中
+                } else {
+                    return false;
+                }
+            } else {
+                Log::error("订单查询失败：" . $order_no . $result["err_code_des"]);
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error("订单查询异常：" . $e->getMessage());
+            return false;
+        }
+
+
+    }
+
+    /**
+     * 关闭订单
+     * @param $order_no
+     * @throws \WxPayException
+     */
+    public function closeOrder($order_no)
+    {
+        $inputObj = new \WxPayCloseOrder();
+        $inputObj->SetOut_trade_no($order_no);
+        $res = \WxPayApi::closeOrder($inputObj);
+        Log::error($res);
+        return ;
+
     }
 
 }

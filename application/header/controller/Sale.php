@@ -55,9 +55,12 @@ class Sale extends ShopBase
     public function saleDetail()
     {
         $group_id = input("group_id");
-        model("HeaderGroup")->where("id", $group_id)->find();
-
-
+        $group = model("HeaderGroup")->where("id", $group_id)->find();
+        $list = model("HeaderGroupProduct")->where("header_group_id", $group_id)->select();
+        $amount = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("(group_price-purchase_price)*sell_num");
+        $this->assign("list", $list);
+        $this->assign("group", $group);
+        $this->assign("amount", $amount);
         return $this->fetch();
     }
 

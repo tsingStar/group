@@ -57,6 +57,7 @@
                     </td>
                     <td>
                         <button class="btn btn-primary radius size-M" type="button" onclick="checkDetail('{$item.id}')">查看销售详情</button>
+                        <button class="btn btn-primary radius size-M" type="button" onclick="downGroup('{$item.id}')">下载军团销售记录</button>
                     </td>
                 </tr>
                 {/foreach}
@@ -77,6 +78,16 @@
             content:'{:url(\'Sale/saleDetail\')}?group_id='+group_id
         });
         layer.full(index);
+    }
+    //下载军团销售记录
+    function downGroup(group_id) {
+        let iframe = document.createElement("iframe");
+        iframe.setAttribute("src", "https://www.ybt9.com/wapp/Pub/getGroupData?group_id="+group_id);
+        iframe.style.display = "none";
+        $("body").append(iframe);
+        setTimeout(function () {
+            $(iframe).remove();
+        }, 3000);
     }
 </script>
 </body>

@@ -916,11 +916,11 @@ class Header extends Controller
         if ($amount > $header["amount_able"]) {
             exit_json(-1, "可提现金额不足");
         }
-//        if(!$amount || $amount<10){
-//            exit_json(-1, "提现金额不合法");
-//        }
+        if(!$amount || $amount<1000){
+            exit_json(-1, "提现金额不能低于1000元");
+        }
         //计算提现手续费及实际到账金额
-        $rate = $header["rate"]/100;
+        $rate = 0.001;
         $fee = round($amount * $rate, 2);
         $money = $amount - $fee;
         $order_no = getOrderNo();

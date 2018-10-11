@@ -741,6 +741,33 @@ class Leader extends Controller
             $order["order_no"],
             $order["pick_address"]
         ];
+
+        //发送取货通知消息结束
+        $user_id = $order["user_id"];
+        $user = model("User")->where("id", $user_id)->find();
+        $form = db("FormId")->where("user_id", $user_id)->find();
+        if($form){
+            $od = model("OrderDet")->where("order_no", $order_no)->select();
+            $pro_list = "";
+            foreach ($od as $item){
+                $pro_list .= $item["product_name"]."*".$item["num"]."\n";
+            }
+            $template = [
+                "open_id"=>$user["open_id"],
+                "template_id"=>"-6UCYEKPtaT8WSwO63O9DIHfFus6zkFE7cm4FGyRlJk",
+                "page"=>"pages/members/membersOrderDetails/membersOrderDetails?order=".$order["order_no"],
+                "form_id"=>$form["form_id"],
+                "receive_address"=>$order["pick_address"],
+                "order_no"=>$order["order_no"],
+                "product_list"=>$pro_list,
+                "order_money"=>$order["order_money"],
+                "tips"=>"你的商品已到货，请到取货地址出示取货二维码取货"
+            ];
+            sendTemplate($template);
+            db("FormId")->where("id", $form["id"])->delete();
+        }
+        //发送取货通知消息结束
+
         $sms = new SendSms($phone, "9374132");
         $res = $sms->sendTemplate($param);
         if ($res) {

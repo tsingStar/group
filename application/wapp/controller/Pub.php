@@ -276,5 +276,39 @@ class Pub extends Controller
 
     }
 
+    /**
+     * 释放商品库存
+     */
+    public function releaseRemain()
+    {
+        try{
+            $list = model("OrderRemainPre")->where("status", 0)->where("create_time", "lt", time()-301)->select();
+            foreach ($list as $value){
+                $weixin = new WeiXinPay();
+                $order_no = $value["order_no"];
+                $res = $weixin->orderQuery($order_no);
+                if($res === true){
+                    //订单已支付或在支付过程中,库存锁定
+
+                }else if($res === false){
+                    //订单已超时或已取消支付或未发起支付
+                    //订单做关闭处理
+                    $weixin->closeOrder($order_no);
+                    $value->save(["status"=>2]);
+                    $pro_list = json_decode($value["product_info"], true);
+                    foreach ($pro_list as $item){
+                        model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+                    }
+                }else{
+                    exit();
+                }
+            }
+        }catch (\Exception $e){
+            exit();
+        }
+        exit("ok");
+    }
+
+
 
 }

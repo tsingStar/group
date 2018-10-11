@@ -8,62 +8,59 @@
             <table class="table table-border table-bordered table-bg table-hover table-sort">
                 <thead>
                     <tr class="text-c">
-                        <th width="100">军团名称</th>
-                        <th width="100">军团公告</th>
-                        <th width="100">军团状态</th>
-                        <th width="100">佣金结算状态</th>
-                        <th width="100">开团时间</th>
-                        <th width="100">结团时间</th>
-                        <th width="100">操作</th>
+                        <th width="100">商品名称</th>
+                        <th width="100">商品进价</th>
+                        <th width="100">商品市场价</th>
+                        <th width="100">商品团购价</th>
+                        <th width="100">销量</th>
+                        <th width="100">退货数量</th>
+                        <th width="100">毛利</th>
                     </tr>
                 </thead>
                 <tbody>
                 {foreach $list as $item}
                 <tr class="text-c va-m">
                     <td>
-                        {$item.group_title}
+                        {$item.product_name}
                     </td>
                     <td>
-                        {$item.group_notice}
+                        {$item.purchase_price}
                     </td>
                     <td>
-                        {:config('group_status')[$item.status]}
+                        {$item.market_price}
                     </td>
                     <td>
-                        {if $item.commission_status eq 1}
-                        已结算
-                        {else}
-                        未结算
-                        {/if}
+                        {$item.group_price}
                     </td>
                     <td>
-                        {$item.open_time}
+                        {$item.sell_num}
                     </td>
                     <td>
-                        {$item.close_time}
+                        {$item.refund_num}
                     </td>
                     <td>
-                        <button class="btn btn-primary radius size-M" type="button" onclick="checkDetail('{$item.id}')">查看销售详情</button>
+                        {:round(($item.group_price-$item.purchase_price)*$item.sell_num, 2)}
                     </td>
                 </tr>
                 {/foreach}
                 </tbody>
             </table>
-                {$list->render()}
+            当前军团总毛利： {$amount} &nbsp;&nbsp;&nbsp;<button class="btn btn-primary radius size-M" type="button" onclick="downGroup('{$group.id}')">下载军团销售记录</button>
         </div>
     </div>
 </div>
 
 {include file='pub/footer'/}
 <script type="text/javascript">
-    //查看销售详情
-    function checkDetail(group_id){
-        var index = layer.open({
-            type:2,
-            title:'军团销售详情',
-            content:'{:url(\'Sale/saleDetail\')}?group_id='+group_id
-        });
-        layer.full(index);
+    //下载军团销售记录
+    function downGroup(group_id) {
+        let iframe = document.createElement("iframe");
+        iframe.setAttribute("src", "https://www.ybt9.com/wapp/Pub/getGroupData?group_id="+group_id);
+        iframe.style.display = "none";
+        $("body").append(iframe);
+        setTimeout(function () {
+            $(iframe).remove();
+        }, 3000);
     }
 </script>
 </body>

@@ -48,31 +48,37 @@
         // $(".children-"+pid).toggle();
         var status = $(o).data("status");
         if(status == 1){
-            $.post("{:url('Product/showHistory')}", {id:pid}, function(res){
-                var list = res.data;
-                if(list.length == 0){
-                    layer.msg("暂无往期商品");
-                }
-                var _html = "";
-                $.each(list, function(i1, v1){
-                    _html += '                <tr class="'+v1.base_id+' children-'+v1.base_id+' text-c" data-product=\'{"base_id":'+v1.base_id+', "product_name":"'+v1.product_name+'", "self_limit":'+v1.self_limit+', "group_limit":'+v1.group_limit+', "purchase_price":'+v1.purchase_price+', "market_price":'+v1.market_price+',"group_price":'+v1.group_price+', "commission":'+v1.commission+', "remain":'+v1.remain+'}\'>\n' +
-                        '                    <td>\n' +
-                        '                        <input type="checkbox" class="checked-'+v1.base_id+'" onclick="checkIt(this)">\n' +
-                        '                    </td>\n' +
-                        '                    <td>\n' +
-                        '                        '+v1.product_name+'\n' +
-                        '                    </td>\n' +
-                        '                    <td>\n' +
-                        '                        市场价：'+v1.market_price+'&nbsp;\n' +
-                        '                        团购价：'+v1.group_price+'\n' +
-                        '                    </td>\n' +
-                        '                </tr>\n';
-                });
-                $(o).parent().parent().after(_html);
+            var chd =  $(".children-"+pid);
+            if(chd.length>0){
+                chd.show();
                 $(o).data("status", 0);
-            });
+            }else{
+                $.post("{:url('Product/showHistory')}", {id:pid}, function(res){
+                    var list = res.data;
+                    if(list.length == 0){
+                        layer.msg("暂无往期商品");
+                    }
+                    var _html = "";
+                    $.each(list, function(i1, v1){
+                        _html += '                <tr class="'+v1.base_id+' children-'+v1.base_id+' text-c" style="background-color: #ccc;" data-product=\'{"base_id":'+v1.base_id+', "product_name":"'+v1.product_name+'", "self_limit":'+v1.self_limit+', "group_limit":'+v1.group_limit+', "purchase_price":'+v1.purchase_price+', "market_price":'+v1.market_price+',"group_price":'+v1.group_price+', "commission":'+v1.commission+', "remain":'+v1.remain+'}\'>\n' +
+                            '                    <td>\n' +
+                            '                        &nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" class="checked-'+v1.base_id+'" onclick="checkIt(this)">\n' +
+                            '                    </td>\n' +
+                            '                    <td>\n' +
+                            '                        '+v1.product_name+'\n' +
+                            '                    </td>\n' +
+                            '                    <td>\n' +
+                            '                        市场价：'+v1.market_price+'&nbsp;\n' +
+                            '                        团购价：'+v1.group_price+'\n' +
+                            '                    </td>\n' +
+                            '                </tr>\n';
+                    });
+                    $(o).parent().parent().after(_html);
+                    $(o).data("status", 0);
+                });
+            }
         }else{
-            $(".children-"+pid).remove();
+            $(".children-"+pid).hide();
             $(o).data("status", 1);
         }
     }

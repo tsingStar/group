@@ -34,17 +34,17 @@ class PayResult extends Controller
         file_put_contents($log_path . DS . date("Y-m-d") . ".txt", date("H:m:s") . json_encode($_POST) . "\r\n", FILE_APPEND);
         if ($_POST['result_code'] == 'SUCCESS') {
             $weixin = new WeiXinPay();
-//            $validRes = $weixin->chargeNotify();
-//            if ($validRes === false) {
-//                Log::error('签名错误');
-//            }
-//            $orderInfo = $this->formatRes($validRes);
+            $validRes = $weixin->chargeNotify();
+            if ($validRes === false) {
+                Log::error('签名错误');
+            }
+            $orderInfo = $this->formatRes($validRes);
             //测试
-            $orderInfo=[
-                "out_trade_no"=>"201809281034337134443",
-                "total_money"=>6,
-                "trade_no"=>"1231513123123"
-            ];
+//            $orderInfo=[
+//                "out_trade_no"=>"201809281034337134443",
+//                "total_money"=>6,
+//                "trade_no"=>"1231513123123"
+//            ];
             //测试
             model('OrderPre')->startTrans();
             model('Order')->startTrans();
@@ -76,6 +76,10 @@ class PayResult extends Controller
                     if ($res1 && $res2 && $res3) {
                         //订单支付后处理，佣金等信息
                         model("Order")->orderSolve($product_list);
+
+                        //订单商品库存处理
+                        model("OrderRemainPre")->where("order_no", $orderInfo["out_trade_no"])->setField("status", 1);
+
                         model('OrderPre')->commit();
                         model('Order')->commit();
                         model('OrderDet')->commit();

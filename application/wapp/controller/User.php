@@ -23,7 +23,7 @@ class User extends Controller
     protected function _initialize()
     {
         parent::_initialize();
-        if(request()->action() != "getPickQrcode"){
+        if (request()->action() != "getPickQrcode") {
             $user_id = input('user_id');
             if (!$user_id) {
                 exit_json(-1, '用户不存在，请重新登陆');
@@ -236,11 +236,68 @@ class User extends Controller
     }
 
     /**
+     * 校验库存合法
+     */
+    public function checkOrder()
+    {
+        $product_list = input("product_list/a");
+
+        $bol = false;
+        $pro_name = "";
+        $pro_arr = [];
+        foreach ($product_list as $item) {
+            $pro = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
+            if ($pro["remain"] != -1) {
+                if ($pro["remain"] < $item["num"]) {
+                    $bol = true;
+                    $pro_name .= $item["product_name"] . "、";
+                } else {
+                    $pro_arr[] = [
+                        "header_product_id" => $item["header_product_id"],
+                        "num" => $item["num"]
+                    ];
+                }
+            }
+        }
+        if ($bol) {
+            exit_json(-1, $pro_name . "库存不足");
+        }
+        $order_no = getOrderNo();
+        foreach ($pro_arr as $val) {
+            model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
+        }
+        $order = model("OrderRemainPre")->where("order_no", $order_no)->find();
+        if ($order) {
+            exit_json(1, "请求成功", ["order_no" => $order_no]);
+        } else {
+            $res = model("OrderRemainPre")->insert([
+                "order_no" => $order_no,
+                "product_info" => json_encode($pro_arr),
+                "create_time" => time(),
+                "status" => 0
+            ]);
+            if ($res) {
+                exit_json(1, '请求成功', ["order_no" => $order_no]);
+            } else {
+                exit_json(-1, "订单生成失败");
+            }
+        }
+    }
+
+    /**
      * 获取立即下单
      */
     public function makeOrder()
     {
-        $order_no = getOrderNo();
+//        $order_no = getOrderNo();
+        $order_no = input("order_no");
+        if(!$order_no){
+            $order_no = getOrderNo();
+        }
+        $remain_pre = model("OrderRemainPre")->where("order_no", $order_no)->find();
+        if ($remain_pre["status"] == 2) {
+            exit_json(-1, "订单已超时， 请重新下单");
+        }
         $header_id = input('header_id');
         $leader_id = input('leader_id');
         $header_group_id = input('header_group_id');
@@ -254,17 +311,28 @@ class User extends Controller
         $user_telephone = input('user_telephone');
         $remarks = input('remarks');
         $product_list = input('product_list/a');
-        $product_list = array_filter($product_list, function ($item){
-            if($item["num"] == 0){
+        $product_list = array_filter($product_list, function ($item) {
+            if ($item["num"] == 0) {
                 return false;
-            }else{
+            } else {
                 return true;
             }
         });
         $order_money = 0;
+//        $bol = true;
+//        $product_name = "";
         foreach ($product_list as $item) {
+//            $header_product = model('HeaderGroupProduct')->where('id', $item['header_product_id'])->find();
+//            if ($header_product["remain"] != -1 && $header_product["remain"] < $item["num"]) {
+//                $bol = false;
+//                $product_name .= $header_product["product_name"] . "、";
+//
+//            }
             $order_money += $item['group_price'] * $item['num'];
         }
+//        if (!$bol) {
+//            exit_json(-1, $product_name . "商品库存不足");
+//        }
         $order_money = round($order_money, 2);
         $group = model("Group")->where('id', $group_id)->find();
         if ($group['status'] != 1) {
@@ -294,7 +362,9 @@ class User extends Controller
             "out_trade_no" => $data['order_no'],
             "total_amount" => $data['order_money'],
             "trade_type" => "JSAPI",
-            "open_id" => $this->user['open_id']
+            "open_id" => $this->user['open_id'],
+            "time_start"=>date("YmdHis", $remain_pre->getData("create_time")),
+            "time_expire"=>date("YmdHis", $remain_pre->getData("create_time")+300)
         ];
         $notify_url = config('notify_url');
         model('OrderPre')->startTrans();
@@ -401,11 +471,28 @@ class User extends Controller
     {
         $order = model("Order")->where("user_id", $this->user["id"])->order("create_time desc")->find();
         $address = [
-            "user_name"=>$order["user_name"],
-            "user_telephone"=>$order["user_telephone"]
+            "user_name" => is_null($order["user_name"]) ? "" : $order["user_name"],
+            "user_telephone" => is_null($order["user_telephone"]) ? "" : $order["user_telephone"]
         ];
         exit_json(1, "请求成功", $address);
 
+    }
+
+    /**
+     * 异步保存form_id
+     */
+    public function setFormId()
+    {
+        $form_id = input("form_id");
+        $res = db("form_id")->insert([
+            "user_id"=>$this->user['id'],
+            "form_id"=>$form_id
+        ]);
+        if($res){
+            exit_json();
+        }else{
+            exit_json(-1);
+        }
     }
 
 

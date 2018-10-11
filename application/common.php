@@ -317,7 +317,7 @@ function get_millisecond()
 /**
  * Excel一键导出
  */
-function excel($header, $data, $filename, $num=1, $extraTitle)
+function excel($header, $data, $filename, $num = 1, $extraTitle)
 {
     $error = \Excel::export($header, $data, $filename, '2007', $num, $extraTitle);
     return $error;
@@ -348,64 +348,100 @@ function arr_unique($arr)
  * @param $name
  * @return array|bool|string
  */
-function uploadFile($name){
+function uploadFile($name)
+{
     $file = request()->file($name);
-    if($file){
-        if(is_array($file)){
+    if ($file) {
+        if (is_array($file)) {
             $file_url = [];
             foreach ($file as $item) {
                 $info = $item->move(__UPLOAD__);
                 $saveName = $info->getSaveName();
-                $path = __URL__."/upload/" . $saveName;
+                $path = __URL__ . "/upload/" . $saveName;
                 $file_url[] = $path;
             }
             $result_url = $file_url;
-        }else{
+        } else {
             $info = $file->move(__UPLOAD__);
             $saveName = $info->getSaveName();
-            $path = __URL__."/upload/" . $saveName;
+            $path = __URL__ . "/upload/" . $saveName;
             $result_url = $path;
         }
-    }else{
+    } else {
         $result_url = false;
     }
     return $result_url;
 }
 
-function uploadTags($name, $form = 'form', $is_img = true, $fileLimit = 1)
+function getAccessToken()
 {
-    $tips = $is_img ? '选择图片' : '选择文件';
-    $contain = $name;
-    $pickBtn = $name.'Pick';
-    $config_arr = [
-        'auto' => true,
-        'swf' => '__STATIC__/lib/webuploader/0.1.5/Uploader.swf',
-        'server' => '/admin/Pub/uploadImg',
-        'pick' => "#$pickBtn",
-        'fileNumLimit'=>$fileLimit
-    ];
-
-    if ($is_img) {
-        $config_arr['resize'] = true;
-        $config_arr['accept'] = [
-            'title' => 'Images',
-            'extensions' => 'gif,jpg,jpeg,bmp,png',
-            'mimeTypes' => 'image/*'
-        ];
+    if (cache("access_token")) {
+        return cache("access_token");
+    } else {
+        $res = json_decode(file_get_contents("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" . config("weixin.app_id") . "&secret=" . config("weixin.app_secret")), true);
+        if (!isset($res["access_token"])) {
+            return false;
+        } else {
+            cache("access_token", $res["access_token"], $res["expires_in"]);
+            return $res["access_token"];
+        }
     }
-    $config = json_encode($config_arr);
-
-    return "
-<div class='uploader-thum-container'>
-					<div id='$contain' class='uploader-list'>
-					</div>
-					<div id='$pickBtn'>$tips</div>
-				</div>
-<script>
-window.onload = function(){
-    uploadImage($('#$contain'), $config, $('$form'), '$name', $is_img);
 }
-</script>";
 
+/**
+ * 发送模版消息
+ * @param $order
+ */
+function sendTemplate($order)
+{
+    $access_token = getAccessToken();
+    $data = [
+        "touser"=>$order["open_id"],
+        "template_id"=>$order["template_id"],
+        "page"=>$order["page"],
+        "form_id"=>$order["form_id"],
+        "data"=>[
+            "keyword1"=>[
+                "value"=>$order["receive_address"],
+            ],
+            "keyword2"=>[
+                "value"=>$order["order_no"]
+            ],
+            "keyword3"=>[
+                "value"=>$order["product_list"]
+            ],
+            "keyword4"=>[
+                "value"=>$order["order_money"]
+            ],
+            "keyword5"=>[
+                "value"=>$order["tips"]
+            ]
+        ]
+    ];
+    $url = "https://api.weixin.qq.com/cgi-bin/message/wxopen/template/send?access_token=".$access_token;
+    $res = curl_request($url, json_encode($data));
 }
+
+/**
+ * 请求
+ * @param $url
+ * @param $param
+ * @return mixed
+ */
+function curl_request($url, $param="")
+{
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    if ($param != '') {
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $param);
+    }
+//    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+//    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_HEADER, false);
+    $file_contents = curl_exec($ch);
+    curl_close($ch);
+    return $file_contents;
+}
+
 
