@@ -51,7 +51,7 @@ class Leader extends Controller
         if ($this->leader['header_id'] != $group['header_id']) {
             exit_json(-1, '你不是当前城主下的团长');
         }
-        $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc')->select();
+        $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc')->order("ord")->select();
         foreach ($product__list as $item) {
             $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
         }
@@ -319,7 +319,7 @@ class Leader extends Controller
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
-        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price, header_product_id')->select();
+        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price, header_product_id')->order("ord")->select();
         foreach ($product_list as $value) {
 //            $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->find();
             $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();

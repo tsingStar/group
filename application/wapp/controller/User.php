@@ -292,7 +292,8 @@ class User extends Controller
 //        $order_no = getOrderNo();
         $order_no = input("order_no");
         if(!$order_no){
-            $order_no = getOrderNo();
+//            $order_no = getOrderNo();
+            exit_json(-1, "订单参数错误");
         }
         $remain_pre = model("OrderRemainPre")->where("order_no", $order_no)->find();
         if ($remain_pre["status"] == 2) {
