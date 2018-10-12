@@ -177,7 +177,7 @@ class Group extends ShopBase
                             'group_price' => $product_data['group_price'],
                             'group_limit' => $product_data['group_limit'],
                             'self_limit' => $product_data['self_limit'],
-                            'ord' => $val['ord'] + 1,
+                            'ord' => $product_data['ord'],
                             'product_desc' => $product_data['product_desc'],
                             'header_product_id' => $product_id
                         ];
