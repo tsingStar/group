@@ -126,7 +126,7 @@ class Header extends Controller
 
                 //二次添加商品处理加入团购商品列表
                 $group_list = db()->query("select * from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
-                foreach ($group_list as $val) {
+                foreach ($group_list as $key=>$val) {
                     $g_product = model("GroupProduct")->where([
                         'header_group_id' => $group_id,
                         'header_product_id' => $product_id,
@@ -145,7 +145,7 @@ class Header extends Controller
                             'group_price' => $product_data['group_price'],
                             'group_limit' => $product_data['group_limit'],
                             'self_limit' => $product_data['self_limit'],
-                            'ord' => $val['ord'] + 1,
+                            'ord' => $product_data['ord'],
                             'product_desc' => $product_data['product_desc'],
                             'header_product_id' => $product_id
                         ];
@@ -308,7 +308,7 @@ class Header extends Controller
             //参团人员
             $item['join_list'] = $list;
             //团购产品列表
-            $product_list = model('HeaderGroupProduct')->where('header_group_id', $item['id'])->select();
+            $product_list = model('HeaderGroupProduct')->where('header_group_id', $item['id'])->order("ord")->select();
             foreach ($product_list as $value) {
                 $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->select();
             }

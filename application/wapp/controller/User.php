@@ -211,6 +211,10 @@ class User extends Controller
     {
         $product_id = input('product_id');
         $group_id = input('group_id');
+        $group = model("Group")->where("id", $group_id)->find();
+        if ($group["status"] != 1) {
+            exit_json(-1, "团购未开启或已结束");
+        }
         $num = input('num');
         $product = model('GroupProduct')->where('id', $product_id)->find();
         $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
@@ -242,6 +246,22 @@ class User extends Controller
     {
         $product_list = input("product_list/a");
 
+
+        //TODO 待处理，上次锁定库存未释放,已处理，不确定是否有未处理bug
+        $remain_order = model("OrderRemainPre")->where("user_id", $this->user['id'])->where("status", 0)->select();
+        $weixin = new WeiXinPay();
+        foreach ($remain_order as $value) {
+            $r = $weixin->orderQuery($value["order_no"]);
+            if (!$r) {
+                $value->save(["status" => 2]);
+                $p_list = json_decode($value["product_info"], true);
+                foreach ($p_list as $item) {
+                    model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+                }
+            }
+        }
+
+
         $bol = false;
         $pro_name = "";
         $pro_arr = [];
@@ -263,6 +283,9 @@ class User extends Controller
             exit_json(-1, $pro_name . "库存不足");
         }
         $order_no = getOrderNo();
+//        if (count($pro_arr) == 0) {
+//            exit_json(1, "请求成功", ["order_no" => $order_no]);
+//        }
         foreach ($pro_arr as $val) {
             model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
         }
@@ -271,6 +294,7 @@ class User extends Controller
             exit_json(1, "请求成功", ["order_no" => $order_no]);
         } else {
             $res = model("OrderRemainPre")->insert([
+                "user_id" => $this->user["id"],
                 "order_no" => $order_no,
                 "product_info" => json_encode($pro_arr),
                 "create_time" => time(),
@@ -291,8 +315,9 @@ class User extends Controller
     {
 //        $order_no = getOrderNo();
         $order_no = input("order_no");
-        if(!$order_no){
-            $order_no = getOrderNo();
+        if (!$order_no) {
+//            $order_no = getOrderNo();
+            exit_json(-1, "订单参数错误");
         }
         $remain_pre = model("OrderRemainPre")->where("order_no", $order_no)->find();
         if ($remain_pre["status"] == 2) {
@@ -363,8 +388,8 @@ class User extends Controller
             "total_amount" => $data['order_money'],
             "trade_type" => "JSAPI",
             "open_id" => $this->user['open_id'],
-            "time_start"=>date("YmdHis", $remain_pre->getData("create_time")),
-            "time_expire"=>date("YmdHis", $remain_pre->getData("create_time")+300)
+            "time_start" => date("YmdHis", $remain_pre->getData("create_time")),
+            "time_expire" => date("YmdHis", $remain_pre->getData("create_time") + 300)
         ];
         $notify_url = config('notify_url');
         model('OrderPre')->startTrans();
@@ -485,13 +510,62 @@ class User extends Controller
     {
         $form_id = input("form_id");
         $res = db("form_id")->insert([
-            "user_id"=>$this->user['id'],
-            "form_id"=>$form_id
+            "user_id" => $this->user['id'],
+            "form_id" => $form_id
         ]);
-        if($res){
+        if ($res) {
             exit_json();
-        }else{
+        } else {
             exit_json(-1);
+        }
+    }
+
+    /**
+     * 分享得红包
+     */
+    public function getCoupon()
+    {
+        $open_id = $this->user["open_id"];
+        $order_no = input("order_no");
+        $order = model("Order")->where("order_no", $order_no)->where("user_id", $this->user["id"])->find();
+        if(!$order){
+            exit_json(-1, "抱歉，未获得红包1");
+        }
+        if ($order["order_money"] - $order["refund_money"] < 9) {
+            exit_json(-1, "订单消费金额达到9元，有机会获得红包");
+        } else {
+            $cr = db("CouponRecord")->where("order_no", $order_no)->find();
+            if($cr){
+                exit_json(-1, "抱歉，未获得红包2");
+            }
+            //计算红包金额
+            $amount = 0.3;
+            $rand = rand(0, 300);
+            echo $rand;
+            if ($rand < 100) {
+                $coupon_no = getOrderNo();
+                $id = db("CouponRecord")->insertGetId([
+                    "coupon_no" => $coupon_no,
+                    "order_no" => $order_no,
+                    "create_time" => date("Y-m-d H:i:s")
+                ]);
+                if ($id > 0) {
+                    $weixin = new WeiXinPay();
+                    $order_info = [
+                        "open_id" => $open_id,
+                        "amount" => $amount,
+                        "check_name" => "NO_CHECK",
+                        "desc" => "分享得红包",
+                        "order_no" => $coupon_no
+                    ];
+                    $weixin->withdraw($order_info);
+                    exit_json();
+                }else{
+                    exit_json(-1, "抱歉，未获得红包3");
+                }
+            } else {
+                exit_json(-1, "抱歉，未获得红包4");
+            }
         }
     }
 

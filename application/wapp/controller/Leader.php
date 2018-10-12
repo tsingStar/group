@@ -51,7 +51,7 @@ class Leader extends Controller
         if ($this->leader['header_id'] != $group['header_id']) {
             exit_json(-1, '你不是当前城主下的团长');
         }
-        $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc')->select();
+        $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc')->order("ord")->select();
         foreach ($product__list as $item) {
             $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
         }
@@ -319,7 +319,7 @@ class Leader extends Controller
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
-        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price, header_product_id')->select();
+        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price, header_product_id')->order("ord")->select();
         foreach ($product_list as $value) {
 //            $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->find();
             $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
@@ -746,22 +746,22 @@ class Leader extends Controller
         $user_id = $order["user_id"];
         $user = model("User")->where("id", $user_id)->find();
         $form = db("FormId")->where("user_id", $user_id)->find();
-        if($form){
+        if ($form) {
             $od = model("OrderDet")->where("order_no", $order_no)->select();
             $pro_list = "";
-            foreach ($od as $item){
-                $pro_list .= $item["product_name"]."*".$item["num"]."\n";
+            foreach ($od as $item) {
+                $pro_list .= $item["product_name"] . "*" . $item["num"] . "\n";
             }
             $template = [
-                "open_id"=>$user["open_id"],
-                "template_id"=>"-6UCYEKPtaT8WSwO63O9DIHfFus6zkFE7cm4FGyRlJk",
-                "page"=>"pages/members/membersOrderDetails/membersOrderDetails?order=".$order["order_no"],
-                "form_id"=>$form["form_id"],
-                "receive_address"=>$order["pick_address"],
-                "order_no"=>$order["order_no"],
-                "product_list"=>$pro_list,
-                "order_money"=>$order["order_money"],
-                "tips"=>"你的商品已到货，请到取货地址出示取货二维码取货"
+                "open_id" => $user["open_id"],
+                "template_id" => "-6UCYEKPtaT8WSwO63O9DIHfFus6zkFE7cm4FGyRlJk",
+                "page" => "pages/members/membersOrderDetails/membersOrderDetails?order=" . $order["order_no"],
+                "form_id" => $form["form_id"],
+                "receive_address" => $order["pick_address"],
+                "order_no" => $order["order_no"],
+                "product_list" => $pro_list,
+                "order_money" => $order["order_money"],
+                "tips" => "你的商品已到货，请到取货地址出示取货二维码取货"
             ];
             sendTemplate($template);
             db("FormId")->where("id", $form["id"])->delete();
@@ -926,6 +926,16 @@ class Leader extends Controller
         $data["commission_money"] = round($commission_money, 2);
         exit_json(1, "请求成功", $data);
 
+    }
+
+    /**
+     * 获取团购订单数量
+     */
+    public function getGroupOrderNum()
+    {
+        $group_id = input("group_id");
+        $num = model("Order")->where("group_id", $group_id)->where("leader_id", $this->leader_id)->count();
+        exit_json(1, "请求成功", ["num" => $num]);
     }
 
 
