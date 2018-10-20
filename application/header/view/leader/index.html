@@ -1,0 +1,76 @@
+﻿{include file='pub/header'/}
+<title>商品列表</title>
+</head>
+<body class="pos-r">
+<div>
+    <div class="page-container">
+        <div class="cl pd-5 bg-1 bk-gray mt-20">
+            <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
+               href="javascript:location.replace(location.href);" title="刷新">
+                <i class="Hui-iconfont">&#xe68f;</i>
+            </a>
+        </div>
+        <div class="mt-20">
+            <table class="table table-border table-bordered table-bg table-hover table-sort">
+                <thead>
+                <tr class="text-c">
+                    <th width="60">姓名</th>
+                    <th width="100">联系方式</th>
+                    <th width="100">地址</th>
+                    <th width="100">小区名称</th>
+                    <th width="100">小区户数</th>
+                    <th width="100">可提现金额</th>
+                    <th width="100">冻结金额</th>
+                    <th width="100">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {foreach $list as $item}
+                <tr class="text-c va-m">
+                    <td>{$item.name}</td>
+                    <td>{$item.telephone}</td>
+                    <td>{$item.address}</td>
+                    <td>
+                        {$item.residential}
+                    </td>
+                    <td>{$item.neighbours}</td>
+                    <td>{$item.amount_able}</td>
+                    <td>{$item.amount_lock}</td>
+                    <td class="td-manage">
+                        <button type="button" class="btn btn-primary radius size-MINI" onclick="cancel('{$item.id}')">取消团长</button>
+                    </td>
+                </tr>
+                {/foreach}
+                </tbody>
+            </table>
+            {$list->render()}
+        </div>
+    </div>
+</div>
+
+{include file='pub/footer'/}
+<script type="text/javascript">
+    // $('.table-sort').dataTable({
+    //     "ordering": false,//是否开启排序
+    //     "bStateSave": true,//状态保存
+    // });
+    //取消团长
+    function cancel(id){
+        layer.confirm("确定取消团长身份？", function () {
+            $.post("{:url('cancel')}", {id:id}, function (res) {
+                if(res.code == 1){
+                    layer.msg(res.msg);
+                    setTimeout(function () {
+                        location.reload();
+                    }, 888);
+                }else{
+                    layer.msg(res.msg);
+                }
+            });
+        })
+    }
+
+
+</script>
+</body>
+</html>

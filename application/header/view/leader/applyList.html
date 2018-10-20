@@ -35,11 +35,7 @@
                     <td>{$item.telephone}</td>
                     <td>{$item.address}</td>
                     <td>
-                        {if $item.residential eq 1}
-                            是
-                        {else}
-                            否
-                        {/if}
+                        {$item.residential}
                     </td>
                     <td>{$item.neighbours}</td>
                     <td>
@@ -71,21 +67,23 @@
                     <td>{$item.create_time}</td>
                     <td>
                         {if $item.status eq 1}
-                            已处理
-                        {else}
+                            已同意
+                        {elseif $item.status eq 2}
+                            已拒绝
+                        {else/}
                             未处理
                         {/if}
                     </td>
                     <td class="td-manage">
-                        <a style="text-decoration:none" class="ml-5"
-                           onClick="solve('申请处理','{:url(\'Product/productEdit\', [\'goodid\'=>$item.id])}')"
-                           href="javascript:;">
-                            <i class="Hui-iconfont Hui-iconfont-edit"></i>确认通过
-                        </a>
-                        <a style="text-decoration:none" class="ml-5" onClick="refuse(this,'{$item.id}')"
-                           href="javascript:;" title="删除">
+                        {if $item.status eq 0}
+                        <button type="button" class="btn btn-primary radius size-MINI" onClick="solve('{$item.id}')">
+                            <i class="Hui-iconfont Hui-iconfont-duigou"></i>确认
+                        </button>
+                        <button type="button" class="btn btn-primary radius size-MINI" onClick="refuse('{$item.id}')">
                             <i class="Hui-iconfont Hui-iconfont-del"></i>拒绝
-                        </a>
+                        </button>
+                        {/if}
+                        <button type="button" class="btn btn-primary radius size-MINI" onclick="detail('{$item.id}')">查看详情</button>
                     </td>
                 </tr>
                 {/foreach}
@@ -102,19 +100,47 @@
     //     "ordering": false,//是否开启排序
     //     "bStateSave": true,//状态保存
     // });
+    function detail(id){
+        layer_show("团长申请详情", "{:url('Leader/detail')}?id="+id, 500, 600);
+    }
 
     /**
      * 确认申请
      */
-    function solve(){
-        
+    function solve(id){
+        layer.confirm("确认审核通过？", function () {
+            $.post("{:url('Leader/agree')}", {id:id}, function (res) {
+                if(res.code == 1){
+                    location.reload();
+                }else{
+                    layer.msg(res.msg);
+                }
+            });
+        })
     }
 
     /**
      * 拒绝申请
      */
-    function refuse() {
-        
+    function refuse(id) {
+        layer.prompt({
+            formType: 2,
+            value: '',
+            title: '请输入拒绝原因'
+        }, function(value, index, elem){
+            if(value == ""){
+                layer.msg("请输入拒绝原因");
+            }else{
+                $.post("{:url('Leader/refuse')}",{id:id, reason:value}, function (r) {
+                    if(r.code == 1){
+                        location.reload();
+                    }else{
+                        layer.msg(res.msg);
+                    }
+                });
+            }
+            layer.close(index);
+        });
     }
 
 </script>

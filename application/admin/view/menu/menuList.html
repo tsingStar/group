@@ -126,9 +126,9 @@ function menu_del(obj,id){
 			success: function(res){
 			    if(1 == res.code){
                     location.reload();
-                    layer.msg('已删除!',{icon:1,time:1000});
+                    layer.msg(res.msg,{icon:1,time:1000});
 				}else{
-                    layer.msg('删除失败!',{icon:1,time:1000});
+                    layer.msg(res.msg,{icon:1,time:1000});
 				}
 
 			},

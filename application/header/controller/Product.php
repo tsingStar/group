@@ -61,8 +61,6 @@ class Product extends ShopBase
                     ];
                 }
                 model('ProductSwiper')->saveAll($swiper_list);
-            } else {
-                exit_json(-1, "商品图片不能为空");
             }
             exit_json();
         }
@@ -83,8 +81,9 @@ class Product extends ShopBase
         $product = model('Product')->where('id', $product_id)->find();
         if (request()->isAjax()) {
             $data = input('post.');
-            if (count($data["swiper"]) > 0) {
-                foreach ($data["swiper"] as $item) {
+            $swiper = input("swiper/a");
+            if (count($swiper) > 0) {
+                foreach ($swiper as $item) {
                     $arr = pathinfo($item);
                     $ext = in_array($arr['extension'], ["jpg", "jpeg", "png", "bmp"]) ? 1 : 2;
                     $swiper_list[] = [
@@ -95,8 +94,6 @@ class Product extends ShopBase
                 }
                 model('ProductSwiper')->where('product_id', $product_id)->delete();
                 model('ProductSwiper')->saveAll($swiper_list);
-            } else {
-                exit_json(-1, "商品图片不能为空");
             }
             $product->allowField(['product_name', 'desc'])->save($data);
             exit_json();

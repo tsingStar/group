@@ -2,6 +2,7 @@
 
 namespace app\common\model;
 
+use function Sodium\crypto_sign_secretkey;
 use think\Log;
 
 require_once VENDOR_PATH . 'WeiXin/WxPay.Api.php';
@@ -229,6 +230,40 @@ class WeiXinPay
         Log::error($res);
         return ;
 
+    }
+
+    /**
+     * 发放红包
+     * @param array $order
+     */
+    public function sendRedPack($order)
+    {
+
+        $inputObj = new \WxSendRedPack();
+        $inputObj->SetMchBillNo($order["order_no"]);
+        $inputObj->SetMchId(config("weixin.mch_id"));
+        $inputObj->SetActName($order["act_name"]);
+        $inputObj->SetAppId(config("weixin.app_id"));
+        $inputObj->SetAmount($order["amount"]*100);
+        if(isset($order["consume_mch_id"])){
+            $inputObj->SetConsumeMchId($order["consume_mch_id"]);
+        }
+        if(isset($order["risk_info"])){
+            $inputObj->SetRiskInfo($order["risk_info"]);
+        }
+        $inputObj->SetWishing($order["wishing"]);
+        $inputObj->SetTotalNum($order["total_num"]);
+        $inputObj->SetReOpenId($order["open_id"]);
+        if(isset($order["open_id"])){
+            $inputObj->SetSceneId($order["scene_id"]);
+        }
+        $inputObj->SetSendName();
+
+
+
+
+
+        
     }
 
 }

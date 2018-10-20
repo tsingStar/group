@@ -126,7 +126,7 @@ class Header extends Controller
 
                 //二次添加商品处理加入团购商品列表
                 $group_list = db()->query("select * from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
-                foreach ($group_list as $key=>$val) {
+                foreach ($group_list as $key => $val) {
                     $g_product = model("GroupProduct")->where([
                         'header_group_id' => $group_id,
                         'header_product_id' => $product_id,
@@ -474,19 +474,35 @@ class Header extends Controller
                 $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
                 //团购销售汇总
                 $group_list = model("GroupProduct")->where("header_group_id", $group_id)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id, group_id")->select();
+                $sum_money = $sum_money * (1 - 0.006);
+
+                //获取当前军团红包使用费用
+                $coupon_fee = db("CouponRecord")->where("header_group_id", $group_id)->where("status", 1)->sum("coupon");
+                $coupon_fee = round($coupon_fee, 2);
+
+
                 model("Header")->where("id", $group["header_id"])->setInc("amount_lock", $sum_money);
-                model("HeaderMoneyLog")->save([
-                    "header_id" => $group["header_id"],
-                    "type" => 1,
-                    "money" => $sum_money,
-                    "order_no" => $group_id
+                model("HeaderMoneyLog")->saveAll([
+                    [
+                        "header_id" => $group["header_id"],
+                        "type" => 1,
+                        "money" => round($sum_money - $coupon_fee, 2),
+                        "order_no" => $group_id
+                    ],
+                    [
+                        "header_id" => $group["header_id"],
+                        "type" => 5,
+                        "money" => $coupon_fee,
+                        "order_no" => $group_id
+                    ],
+
                 ]);
                 foreach ($group_list as $item) {
                     model("User")->where("id", $item["leader_id"])->setInc("amount_lock", $item["sum_money"]);
                     model("LeaderMoneyLog")->data([
                         "leader_id" => $item["leader_id"],
                         "type" => 1,
-                        "money" => $item["sum_money"],
+                        "money" => round($item["sum_money"] * (1 - 0.006), 2),
                         "order_no" => $item["group_id"]
                     ])->isUpdate(false)->save();
                 }
@@ -762,11 +778,16 @@ class Header extends Controller
 //        $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
         $sum_money = model("GroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
 
+        //获取当前军团红包使用费用
+        $coupon_fee = db("CouponRecord")->where("header_group_id", $group_id)->where("status", 1)->sum("coupon");
+        $coupon_fee = round($coupon_fee, 2);
+
         //团购销售汇总
         $group_list = model("GroupProduct")->where("header_group_id", $group_id)->whereIn("leader_id", $leader_ids)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id")->select();
 
         $header = model("Header")->where("id", $this->header_id)->find();
 
+        $sum_money = round($sum_money * (1 - 0.006)-$coupon_fee, 2);
         $header->save([
             "amount_able" => $header["amount_able"] + $sum_money,
             "amount_lock" => $header["amount_lock"] - $sum_money
@@ -775,8 +796,8 @@ class Header extends Controller
         foreach ($group_list as $item) {
             $leader = model("User")->where("id", $item["leader_id"])->find();
             $leader->save([
-                "amount_able" => $leader["amount_able"] + $item["sum_money"],
-                "amount_lock" => $leader["amount_lock"] - $item["sum_money"]
+                "amount_able" => $leader["amount_able"] + $item["sum_money"] * (1 - 0.006),
+                "amount_lock" => $leader["amount_lock"] - $item["sum_money"] * (1 - 0.006)
             ]);
             model("Order")->isUpdate(true)->save(["commission_status" => 1], ["header_group_id" => $group_id]);
         }
@@ -811,12 +832,13 @@ class Header extends Controller
         if ($amount > $header["amount_able"]) {
             exit_json(-1, "可提现金额不足");
         }
-        if(!$amount || $amount<10){
+        if (!$amount || $amount < 10) {
             exit_json(-1, "提现金额不合法");
         }
         //计算提现手续费及实际到账金额
-        $rate = $header["rate"]/100;
-        $fee = round($amount * $rate, 2);
+//        $rate = $header["rate"]/100;
+//        $fee = round($amount * $rate, 2);
+        $fee = 0;
         $money = $amount - $fee;
         $order_no = getOrderNo();
         model("WithdrawLog")->save([
@@ -843,20 +865,28 @@ class Header extends Controller
         if (!is_bool($res)) {
             $log_model->save(["withdraw_time" => $res["payment_time"], "status" => 1]);
             $header->setDec("amount_able", $amount);
-            model("HeaderMoneyLog")->saveAll([
+            $header->setInc("withdraw", $amount);
+//            model("HeaderMoneyLog")->saveAll([
+//                [
+//                    "header_id" => $this->header_id,
+//                    "type" => "3",
+//                    "money" => $money,
+//                    "order_no" => $order_no
+//                ],
+//                [
+//                    "header_id" => $this->header_id,
+//                    "type" => "4",
+//                    "money" => $fee,
+//                    "order_no" => $order_no
+//                ]
+//            ]);
+            model("HeaderMoneyLog")->save(
                 [
                     "header_id" => $this->header_id,
                     "type" => "3",
                     "money" => $money,
                     "order_no" => $order_no
-                ],
-                [
-                    "header_id" => $this->header_id,
-                    "type" => "4",
-                    "money" => $fee,
-                    "order_no" => $order_no
-                ]
-            ]);
+                ]);
             exit_json();
         } else {
             exit_json(-1, "提现操作失败");
@@ -874,6 +904,9 @@ class Header extends Controller
             "bank_no" => input("bank_no"),
             "header_id" => input("header_id")
         ];
+        if (!\BankCheck::check_bankCard($data["bank_no"])) {
+            exit_json(-1, '银行卡格式错误');
+        }
         $bank = db("BankInfo")->where("header_id", $this->header_id)->find();
         if ($bank) {
             $res = db("BankInfo")->where("header_id", $this->header_id)->update($data);
@@ -916,7 +949,7 @@ class Header extends Controller
         if ($amount > $header["amount_able"]) {
             exit_json(-1, "可提现金额不足");
         }
-        if(!$amount || $amount<1000){
+        if (!$amount || $amount < 1000) {
             exit_json(-1, "提现金额不能低于1000元");
         }
         //计算提现手续费及实际到账金额
@@ -946,9 +979,11 @@ class Header extends Controller
             "desc" => "军团提现到银行卡到账",
             "order_no" => $order_no
         ]);
+//        $res = "sdfdsf";
         if (!is_bool($res)) {
             $log_model->save(["withdraw_time" => date("Y-m-d H:i:s"), "status" => 1]);
             $header->setDec("amount_able", $amount);
+            $header->setInc("withdraw", $amount);
             model("HeaderMoneyLog")->saveAll([
                 [
                     "header_id" => $this->header_id,
@@ -968,7 +1003,6 @@ class Header extends Controller
             exit_json(-1, "提现操作失败");
         }
     }
-
 
 
     /**
@@ -1000,7 +1034,8 @@ class Header extends Controller
             "1" => "军团结算",
             "2" => "退款冲减",
             "3" => "提现冲减",
-            "4" => "提现手续费"
+            "4" => "提现手续费",
+            "5" => "红包发放费用"
         ];
         $page = input("page");
         $page_num = input("page_num");

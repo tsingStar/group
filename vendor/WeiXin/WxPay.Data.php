@@ -3682,3 +3682,352 @@ class WxMchPayBank extends WxPayDataBase
     }
 }
 
+/**
+ * Class WxSendRedPack
+ * 发送普通红包
+ */
+class WxSendRedPack extends WxPayDataBase{
+
+
+    /**
+     * 设置商户号
+     * @param $value
+     */
+    public function SetMchId($value)
+    {
+        $this->values["mch_id"] = $value;
+    }
+
+    /**
+     * 获取商户号
+     * @return mixed
+     */
+    public function GetMchId()
+    {
+        return $this->values["mch_id"];
+    }
+
+    /**
+     * 随机字符串
+     * @param string $value
+     **/
+    public function SetNonceStr($value)
+    {
+        $this->values['nonce_str'] = $value;
+    }
+
+    /**
+     * 设置商户订单号
+     * @param $value
+     */
+    public function SetMchBillNo($value)
+    {
+        $this->values["mch_billno"] = $value;
+    }
+
+    /**
+     * 获取商户订单号
+     * @return mixed
+     */
+    public function GetMchBillNo()
+    {
+        return $this->values["mch_billno"];
+    }
+
+    /**
+     * 判断是否设置商户订单号
+     * @return mixed
+     */
+    public function IsSetMchBillNo()
+    {
+        return array_key_exists('mch_billno', $this->values);
+    }
+
+    /**
+     * 设置公众账号
+     * @param string $value
+     **/
+    public function SetAppId($value)
+    {
+        $this->values['wxappid'] = $value;
+    }
+
+    /**
+     * 获取公众账号
+     * @return 值
+     **/
+    public function GetAppId()
+    {
+        return $this->values['wxappid'];
+    }
+
+    /**
+     * 校验公众账号是否存在
+     * @return true 或 false
+     **/
+    public function IsAppId()
+    {
+        return array_key_exists('wxappid', $this->values);
+    }
+    /**
+     * 设置商户名称
+     * @param string $value
+     **/
+    public function SetSendName($value)
+    {
+        $this->values['send_name'] = $value;
+    }
+
+    /**
+     * 获取商户名称
+     * @return 值
+     **/
+    public function GetSendName()
+    {
+        return $this->values['send_name'];
+    }
+
+    /**
+     * 校验商户名称是否存在
+     * @return true 或 false
+     **/
+    public function IsSendName()
+    {
+        return array_key_exists('send_name', $this->values);
+    }
+
+
+    /**
+     * 设置用户openid
+     * @param string $value
+     **/
+    public function SetReOpenId($value)
+    {
+        $this->values['re_openid'] = $value;
+    }
+
+    /**
+     * 获取用户openid
+     * @return 值
+     **/
+    public function GetReOpenId()
+    {
+        return $this->values['re_openid'];
+    }
+
+    /**
+     * 校验用户id是否存在
+     * @return true 或 false
+     **/
+    public function IsReOpenId()
+    {
+        return array_key_exists('re_openid', $this->values);
+    }
+
+    /**
+     * 设置付款金额，单位分
+     * @param $value
+     */
+    public function SetAmount($value)
+    {
+        $this->values["total_amount"] = $value;
+    }
+
+    /**
+     * 获取付款金额，单位分
+     */
+    public function GetAmount()
+    {
+        return $this->values["total_amount"];
+    }
+
+    /**
+     * 付款金额是否存在
+     */
+    public function IsAmountSet()
+    {
+        return array_key_exists('total_amount', $this->values);
+    }
+
+    /**
+     * 设置红包发送人数
+     * @param
+     */
+    public function SetTotalNum($value)
+    {
+        $this->values["total_num"] = $value;
+    }
+    /**
+     * 获取红包发送人数
+     * @param
+     * @return int
+     */
+    public function GetTotalNum()
+    {
+        return $this->values["total_num"];
+    }
+    /**
+     * 红包发送人数是否存在
+     * @param
+     * @return bool
+     */
+    public function IsTotalNumSet()
+    {
+        return array_key_exists('total_num', $this->values);
+    }
+
+    /**
+     * 设置红包祝福语
+     * @param $value
+     */
+    public function SetWishing($value)
+    {
+        $this->values["wishing"] = $value;
+    }
+
+    /**
+     * 获取红包祝福语
+     */
+    public function GetWishing()
+    {
+        return $this->values["wishing"];
+    }
+
+    /**
+     * 红包祝福语是否设置
+     */
+    public function IsWishingSet()
+    {
+        return array_key_exists('wishing', $this->values);
+    }
+    /**
+     * ip地址设置
+     * @param $value
+     */
+    public function SetClientIp($value)
+    {
+        $this->values["client_ip"] = 1123;
+    }
+
+    /**
+     * 获取ip地址
+     */
+    public function GetClientIp()
+    {
+        return $this->values["client_ip"];
+    }
+
+    /**
+     * ip地址是否存在
+     */
+    public function IsClientIpSet()
+    {
+        return array_key_exists('client_ip', $this->values);
+    }
+    /**
+     * 活动名称设置
+     * @param $value
+     */
+    public function SetActName($value)
+    {
+        $this->values["act_name"] = $value;
+    }
+
+    /**
+     * 获取活动名称
+     */
+    public function GetActName()
+    {
+        return $this->values["act_name"];
+    }
+
+    /**
+     * 活动名称是否存在
+     */
+    public function IsActNameSet()
+    {
+        return array_key_exists('act_name', $this->values);
+    }
+    /**
+     * 备注设置
+     * @param $value
+     */
+    public function SetRemark($value)
+    {
+        $this->values["remark"] = $value;
+    }
+
+    /**
+     * 获取备注
+     */
+    public function GetRemark()
+    {
+        return $this->values["remark"];
+    }
+
+    /**
+     * 备注是否存在
+     */
+    public function IsRemarkSet()
+    {
+        return array_key_exists('remark', $this->values);
+    }
+    /**
+     * 设置场景id
+     * @param $value
+     */
+    public function SetSceneId($value)
+    {
+        $this->values["scene_id"] = $value;
+    }
+
+    /**
+     * 获取场景id
+     */
+    public function GetSceneId()
+    {
+        return $this->values["scene_id"];
+    }
+
+    /**
+     * 场景id是否存在
+     */
+    public function IsSceneIdSet()
+    {
+        return array_key_exists('scene_id', $this->values);
+    }
+    /**
+     * 设置活动信息
+     * @param $value
+     */
+    public function SetRiskInfo($value)
+    {
+        $this->values["risk_info"] = $value;
+    }
+
+    /**
+     * 获取活动信息
+     */
+    public function GetRiskInfo()
+    {
+        return $this->values["risk_info"];
+    }
+    /**
+     * 设置资金授权商户号
+     * @param $value
+     */
+    public function SetConsumeMchId($value)
+    {
+        $this->values["consume_mch_id"] = $value;
+    }
+
+    /**
+     * 获取资金授权商户号
+     */
+    public function GetConsumeMchId()
+    {
+        return $this->values["consume_mch_id"];
+    }
+
+}
+

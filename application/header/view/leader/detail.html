@@ -1,0 +1,96 @@
+{include file='pub/header'/}
+<title>新增商品</title>
+</head>
+<body>
+<div class="page-container">
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">团长姓名：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.name}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">联系方式：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.telephone}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">所在地址：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.address}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">小区名称：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.residential}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">小区户数：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.neighbours}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">是否有销售经验：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {if $item.have_sale eq 0}
+            否
+            {else}
+            是
+            {/if}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">业务时间：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {if $item.work_time eq 0}
+            每天
+            {elseif $item.work_time eq 1}
+            周末
+            {else}
+            空余时间
+            {/if}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">其他：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.other}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">申请时间：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {$item.create_time}
+        </div>
+    </div>
+    <div class="row cl">
+        <label class="form-label col-xs-4 col-sm-2">状态：</label>
+        <div class="formControls col-xs-8 col-sm-9">
+            {if $item.status eq 0}
+            未处理
+            {elseif $item.status eq 1}
+            已同意
+            {else}
+            已拒绝
+            {/if}
+        </div>
+    </div>
+
+
+
+    <div class="row cl">
+        <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-2">
+            <button onClick="layer_close();" class="btn btn-default radius" type="button">
+                &nbsp;&nbsp;取消&nbsp;&nbsp;
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+{include file="pub/footer"/}
+</html>

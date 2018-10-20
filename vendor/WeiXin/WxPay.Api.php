@@ -274,6 +274,44 @@ class WxPayApi
     }
 
     /**
+     * @param WxSendRedPack $inputObj
+     * @return mixed
+     * @throws WxPayException
+     */
+    public static function sendRedPack($inputObj)
+    {
+        $url = "https://api.mch.weixin.qq.com/mmpaymkttransfers/sendredpack";
+        if(!$inputObj->IsSetMchBillNo()){
+            throw new WxPayException("发放红包，缺少商户订单号mch_billno");
+        }elseif (!$inputObj->IsActNameSet()){
+            throw new WxPayException("发放红包接口，缺少活动名称act_name");
+        }elseif (!$inputObj->IsAmountSet()){
+            throw new WxPayException("发放红包接口，缺少付款金额total_amount");
+        }elseif (!$inputObj->IsAppId()){
+            throw new WxPayException("发放红包接口，缺少公众账号wxappid");
+        }elseif (!$inputObj->IsRemarkSet()){
+            throw new WxPayException("发放红包接口，缺少备注remark");
+        }elseif (!$inputObj->IsReOpenId()){
+            throw new WxPayException("发放红包接口，缺少用户openid");
+        }elseif (!$inputObj->IsSceneIdSet()){
+            throw new WxPayException("发放红包接口，缺少场景id scene_id");
+        }elseif (!$inputObj->IsSendName()){
+            throw new WxPayException("发放红包接口，缺少商户名称send_name");
+        }elseif (!$inputObj->IsTotalNumSet()){
+            throw new WxPayException("发放红包接口，缺少红包发放总人数total_num");
+        }elseif (!$inputObj->IsWishingSet()){
+            throw new WxPayException("发放红包接口，缺少祝福语wishing");
+        }
+        $inputObj->SetClientIp($_SERVER['REMOTE_ADDR']);
+        $inputObj->SetNonceStr(self::getNonceStr());
+        $inputObj->SetSign();
+        $xml = $inputObj->ToXml();
+        $response = self::postXmlCurl($xml, $url, true);
+        $result = $inputObj->FromXml($response);
+        return $result;
+    }
+
+    /**
      * 获取RSA公钥
      * @param WxGetPublic $inputObj
      * @return mixed

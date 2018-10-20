@@ -16,9 +16,9 @@ class WebOperaLog extends Model
 {
 
 
-    public function __construct($data = [])
+    protected function initialize()
     {
-        parent::__construct($data);
+        parent::initialize();
     }
 
     public function setLoginIpAttr($value)

@@ -127,6 +127,10 @@ class Menu extends BaseController
     function menuDel()
     {
         $menuId = input('post.menuId');
+        $menu = \app\admin\model\Menu::get($menuId);
+        if($menu["is_del"] == 0){
+            exit_json(-1, "当前节点不可删除");
+        }
         $res = $this->menuModel->delMenu($menuId);
         if ($res) {
             exit_json(1, '删除成功');

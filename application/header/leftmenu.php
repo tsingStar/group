@@ -23,17 +23,21 @@ $leftmenu = [
         'navName'=>'账号管理',
         'navChild'=>[
             [
+                'navName'=>'团长列表',
+                'url'=>'Leader/index'
+            ],
+            [
                 'navName'=>'团长申请列表',
                 'url'=>'Leader/applyList'
             ],
-//            [
-//                'navName'=>'团长待审批',
-//                'url'=>'Leader/readyList'
-//            ],
-//            [
-//                'navName'=>'团长提现管理',
-//                'url'=>'Leader/withdrawList'
-//            ],
+            [
+                'navName'=>'团长待审批',
+                'url'=>'Leader/readyList'
+            ],
+            [
+                'navName'=>'团长提现记录',
+                'url'=>'Leader/withdrawList'
+            ],
         ]
     ],
 //    [

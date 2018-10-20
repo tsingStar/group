@@ -528,27 +528,29 @@ class User extends Controller
         $open_id = $this->user["open_id"];
         $order_no = input("order_no");
         $order = model("Order")->where("order_no", $order_no)->where("user_id", $this->user["id"])->find();
-        if(!$order){
-            exit_json(-1, "抱歉，未获得红包1");
+        if (!$order) {
+            exit_json(-1, "分享订单异常");
         }
         if ($order["order_money"] - $order["refund_money"] < 9) {
-            exit_json(-1, "订单消费金额达到9元，有机会获得红包");
+            exit_json(-1, "您与红包擦肩而过，下次努力");
         } else {
             $cr = db("CouponRecord")->where("order_no", $order_no)->find();
-            if($cr){
-                exit_json(-1, "抱歉，未获得红包2");
+            if ($cr) {
+                exit_json(-1, "抱歉，每个订单只有一次拆红包机会");
             }
-            //计算红包金额
+//
+//            //计算红包金额
             $amount = 0.3;
+            $coupon_no = getOrderNo();
+            $id = db("CouponRecord")->insertGetId([
+                "coupon_no" => $coupon_no,
+                "order_no" => $order_no,
+                "header_group_id" => $order["header_group_id"],
+                "create_time" => date("Y-m-d H:i:s"),
+                "coupon" => $amount
+            ]);
             $rand = rand(0, 300);
-            echo $rand;
             if ($rand < 100) {
-                $coupon_no = getOrderNo();
-                $id = db("CouponRecord")->insertGetId([
-                    "coupon_no" => $coupon_no,
-                    "order_no" => $order_no,
-                    "create_time" => date("Y-m-d H:i:s")
-                ]);
                 if ($id > 0) {
                     $weixin = new WeiXinPay();
                     $order_info = [
@@ -558,16 +560,20 @@ class User extends Controller
                         "desc" => "分享得红包",
                         "order_no" => $coupon_no
                     ];
-                    $weixin->withdraw($order_info);
-                    exit_json();
-                }else{
-                    exit_json(-1, "抱歉，未获得红包3");
+                    $res = $weixin->withdraw($order_info);
+//                $res = true;
+                    if ($res) {
+                        db("CouponRecord")->where("id", $id)->update(["status" => 1]);
+                    }
+                    exit_json(1, "恭喜您获得".$amount."元红包，红包会以微信零钱方式发到您手中");
+                } else {
+                    exit_json(-1, "您与红包擦肩而过，下次努力");
                 }
             } else {
-                exit_json(-1, "抱歉，未获得红包4");
+                exit_json(-1, "您与红包擦肩而过，下次努力");
             }
+
         }
     }
-
 
 }

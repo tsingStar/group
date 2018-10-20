@@ -26,7 +26,7 @@ class Pub extends Controller
         //军团信息
         $data = model("OrderDet")->where("header_group_id", $group_id)->field("product_name, sum(num-back_num) product_num")->group("header_product_id")->select();
         $temp1 = [];
-        foreach ($data as $val){
+        foreach ($data as $val) {
             $temp1[] = [
                 $val["product_name"],
                 $val["product_num"]
@@ -91,7 +91,7 @@ class Pub extends Controller
             exit_json(-1, $res['errmsg']);
         }
         $session_key = $res['session_key'];
-        $open_id = $res['openid'];        
+        $open_id = $res['openid'];
         Log::error($open_id);
 
 
@@ -134,7 +134,8 @@ class Pub extends Controller
         $user = model('User')->where('open_id', $open_id)->find();
         if ($user) {
             $data['update_time'] = time();
-            $res = $user->save($data);
+            $user->save($data);
+            $res = true;
             $user_id = $user['id'];
         } else {
             $res = model('User')->save($data);
@@ -143,7 +144,7 @@ class Pub extends Controller
         if ($res) {
             exit_json(1, '登陆成功', model('User')->find($user_id));
         } else {
-            exit_json(-1, '登陆失败asdfghj');
+            exit_json(-1, '登陆失败');
         }
     }
 
@@ -204,13 +205,13 @@ class Pub extends Controller
             if (!in_array($ext, $ext_array)) {
                 exit_json(-1, '请上传有效格式的文件');
             }
-            if($order_no){
+            if ($order_no) {
                 $saveName = $order_no;
-                $path = __URL__ . "/upload/" . $saveName.$ext;
-                if(file_exists($path)){
+                $path = __URL__ . "/upload/" . $saveName . $ext;
+                if (file_exists($path)) {
                     exit_json(1, '操作成功', ["img_url" => $path]);
                 }
-            }else{
+            } else {
                 $saveName = true;
             }
             $info = $file->move(__UPLOAD__, $saveName);
@@ -252,8 +253,8 @@ class Pub extends Controller
     {
         $user_id = input("user_id");
         $role = input("type");
-        $token = md5(time().rand_string());
-        cache($user_id."token".$role, $token);
+        $token = md5(time() . rand_string());
+        cache($user_id . "token" . $role, $token);
         exit_json(1, "请求成功", $token);
     }
 
@@ -281,34 +282,75 @@ class Pub extends Controller
      */
     public function releaseRemain()
     {
-        try{
-            $list = model("OrderRemainPre")->where("status", 0)->where("create_time", "lt", time()-301)->select();
-            foreach ($list as $value){
+        try {
+            $list = model("OrderRemainPre")->where("status", 0)->where("create_time", "lt", time() - 301)->select();
+            foreach ($list as $value) {
                 $weixin = new WeiXinPay();
                 $order_no = $value["order_no"];
                 $res = $weixin->orderQuery($order_no);
-                if($res === true){
+                if ($res === true) {
                     //订单已支付或在支付过程中,库存锁定
 
-                }else if($res === false){
+                } else if ($res === false) {
                     //订单已超时或已取消支付或未发起支付
                     //订单做关闭处理
                     $weixin->closeOrder($order_no);
-                    $value->save(["status"=>2]);
+                    $value->save(["status" => 2]);
                     $pro_list = json_decode($value["product_info"], true);
-                    foreach ($pro_list as $item){
+                    foreach ($pro_list as $item) {
                         model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
                     }
-                }else{
+                } else {
                     exit();
                 }
             }
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             exit();
         }
         exit("ok");
     }
 
+    /**
+     * 记录团购访问记录
+     */
+    public function getOpenGid()
+    {
+        vendor("WeiXin.wxBizDataCrypt");
+        $open_id = input("open_id");
+        $group_id = input("group_id");
+        //0 群 1 好友分享 2 二维码
+        $src_id = input("src_id");
+        $group = model("Group")->where("id", $group_id)->find();
+        if (!$group) {
+            exit();
+        }
+        $session_key = db("os")->where("open_id", $open_id)->value("session_key");
+        $encry = new \wxBizDataCrypt(config("weixin.app_id"), $session_key);
+        $vi = input("vi");
+        $encry_data = input("encry_data");
+        $encry->decryptData($encry_data, $vi, $data);
+        $data = json_decode($data, true);
+        $user = model("User")->where("open_id", $open_id)->find();
+        if (!$user) {
+            exit();
+        }
+        $data1 = [
+            "open_id" => $open_id,
+            "group_id" => $group_id,
+            "openGId" => $data["openGId"],
+            "user_id" => $user["id"],
+            "user_name" => $user["user_name"],
+            "src_id" => $src_id,
+            "avatar" => $user["avatar"]
+        ];
+        $record = model("GroupRecord")->where("open_id", $open_id)->where("group_id", $group_id)->find();
+        if ($record) {
+//            $record->save($data1);
+        } else {
+            model("GroupRecord")->save($data1);
+        }
+        exit();
+    }
 
 
 }

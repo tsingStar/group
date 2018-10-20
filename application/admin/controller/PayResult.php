@@ -77,16 +77,24 @@ class PayResult extends Controller
                         //订单支付后处理，佣金等信息
                         model("Order")->orderSolve($product_list);
 
-                        //订单商品库存处理
-                        model("OrderRemainPre")->where("order_no", $orderInfo["out_trade_no"])->setField("status", 1);
 
                         model('OrderPre')->commit();
                         model('Order')->commit();
                         model('OrderDet')->commit();
+
+                        //订单商品库存处理
+                        model("OrderRemainPre")->where("order_no", $orderInfo["out_trade_no"])->setField("status", 1);
+                        //处理团购访问记录
+                        $grc = model("GroupRecord")->where("group_id", $order_det["group_id"])->where("user_id", $order_det["user_id"])->find();
+                        if($grc){
+                            $grc->save(["status"=>1]);
+                        }
+
                     } else {
                         model('OrderPre')->rollback();
                         model('Order')->rollback();
                         model('OrderDet')->rollback();
+                        Log::error("订单处理异常");
                     }
                 } else {
                     Log::error("订单支付金额错误" . $orderInfo['out_trade_no']);

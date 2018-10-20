@@ -673,8 +673,9 @@ class Leader extends Controller
             exit_json(-1, "可提现余额不足");
         }
         //计算提现手续费及实际到账金额
-        $rate = 0.006;
-        $fee = round($amount * $rate, 2);
+//        $rate = 0.006;
+//        $fee = round($amount * $rate, 2);
+        $fee = 0;
         $money = $amount - $fee;
         $order_no = getOrderNo();
         model("WithdrawLog")->save([
@@ -699,20 +700,30 @@ class Leader extends Controller
         if (!is_bool($res)) {
             $log_model->save(["withdraw_time" => $res["payment_time"], "status" => 1]);
             $header->setDec("amount_able", $amount);
-            model("HeaderMoneyLog")->saveAll([
+            $header->setInc("withdraw", $amount);
+//            model("LeaderMoneyLog")->saveAll([
+//                [
+//                    "leader_id" => $this->leader_id,
+//                    "type" => "3",
+//                    "money" => $money,
+//                    "order_no" => $order_no
+//                ],
+//                [
+//                    "leader_id" => $this->leader_id,
+//                    "type" => "4",
+//                    "money" => $fee,
+//                    "order_no" => $order_no
+//                ]
+//            ]);
+
+            model("LeaderMoneyLog")->save(
                 [
-                    "header_id" => $this->header_id,
+                    "leader_id" => $this->leader_id,
                     "type" => "3",
                     "money" => $money,
                     "order_no" => $order_no
-                ],
-                [
-                    "header_id" => $this->header_id,
-                    "type" => "4",
-                    "money" => $fee,
-                    "order_no" => $order_no
-                ]
-            ]);
+                ]);
+
             exit_json();
         } else {
             exit_json(-1, "提现操作失败");
@@ -936,6 +947,30 @@ class Leader extends Controller
         $group_id = input("group_id");
         $num = model("Order")->where("group_id", $group_id)->where("leader_id", $this->leader_id)->count();
         exit_json(1, "请求成功", ["num" => $num]);
+    }
+    /**
+     * 获取团购访问记录
+     */
+    public function getGroupRecord()
+    {
+        //记录类型  0 访问记录 1 购买记录
+        $status = input("status");
+        $group_id = input("group_id");
+        $page = input("page");
+        $page_num = input("page_num");
+        $model = model("GroupRecord")->where("group_id", $group_id);
+        if($status == 1){
+            $model->where("status", $status);
+        }
+        $list = $model->limit($page*$page_num, $page_num)->order("create_time desc")->select();
+        $look_num = model("GroupRecord")->where("group_id", $group_id)->count();
+        $buy_num = model("GroupRecord")->where("group_id", $group_id)->where("status", 1)->count();
+        $data = [
+            "look_num" => $look_num,
+            "buy_num" => $buy_num,
+            "list" => $list
+        ];
+        exit_json(1, '请求成功', $data);
     }
 
 

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        #copy{
+            display: block;
+            width: 250px;
+            height: 100px;
+            background-color: #ccc;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="plea">
+    <span>邀请码：<p id="con" style="display: inline" data-clipboard-text="1">13123123</p></span><a id="copy" onclick="copy()"  data-clipboard-target="str">复制</a>
+    <p>特别提醒：点击上方复制邀请码，下载APP。注册填写邀请码，系统提供专属您的销售经理为您提供全程优质服务！</p>
+</div>
+
+</body>
+
+<script src="__STATIC__/lib/clipboard/clipboard.js"></script>
+
+<script>
+    function copy(message) {
+        let input = document.createElement("input");
+        input.value = message;
+        document.body.appendChild(input);
+        input.select();
+        input.setSelectionRange(0, input.value.length), document.execCommand('Copy');
+        document.body.removeChild(input);
+        alert("复制成功");
+    }
+
+</script>
+</html>
