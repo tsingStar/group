@@ -90,11 +90,12 @@ class PayResult extends Controller
                             $grc->save(["status"=>1]);
                         }
 
+
                     } else {
                         model('OrderPre')->rollback();
                         model('Order')->rollback();
                         model('OrderDet')->rollback();
-                        Log::error("订单处理异常");
+                        Log::error("订单处理异常" . $orderInfo['out_trade_no']);
                     }
                 } else {
                     Log::error("订单支付金额错误" . $orderInfo['out_trade_no']);

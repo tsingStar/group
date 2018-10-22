@@ -18,4 +18,9 @@ class HeaderGroupProductSwiper extends Model
         parent::initialize();
     }
 
+    public function getSwiper($pid)
+    {
+        return $this->where("header_group_product_id", $pid)->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+    }
+
 }

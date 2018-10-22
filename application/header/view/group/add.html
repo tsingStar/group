@@ -277,7 +277,7 @@
         $.each(product_list, function (i, v) {
             //校验商品合法性
             var pro = {};
-            var a = $(v).find(".product_name").html();
+            var a = $(v).find(".product_name").find("input").val();
             pro["product_name"] = a;
             var b = $(v).find(".group_limit").find("input").val();
             pro["group_limit"] = b;
@@ -547,7 +547,7 @@
     function saveProducts($products) {
         var _html = "";
         $.each($products, function (i, v) {
-            _html += '<tr class="text-c product"><input type="hidden" name="id" value="0"/><input type="hidden" name="base_id" value="' + v.base_id + '"/>    <td class="product_name">' + v.product_name + '</td>    <td class="group_limit">        <input type="text" class="input-text" value="' + v.group_limit + '">    </td>    <td class="self_limit">        <input type="text" class="input-text" value="' + v.self_limit + '">    </td>    <td class="purchase_price">        <input type="text" class="input-text" value="' + v.purchase_price + '">    </td>    <td class="market_price">        <input type="text" class="input-text" value="' + v.market_price + '">    </td>    <td class="group_price">        <input type="text" class="input-text" value="' + v.group_price + '">    </td>    <td class="commission">        <input type="text" class="input-text" value="' + v.commission + '">    </td>    <td class="remain">        <input type="text" class="input-text" value="' + v.remain + '">    </td>    <td>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this)">删除</a>    </td></tr>';
+            _html += '<tr class="text-c product"><input type="hidden" name="id" value="0"/><input type="hidden" name="base_id" value="' + v.base_id + '"/>    <td class="product_name"><input type="text" class="input-text" value="' + v.product_name + '"></td>    <td class="group_limit">        <input type="text" class="input-text" value="' + v.group_limit + '">    </td>    <td class="self_limit">        <input type="text" class="input-text" value="' + v.self_limit + '">    </td>    <td class="purchase_price">        <input type="text" class="input-text" value="' + v.purchase_price + '">    </td>    <td class="market_price">        <input type="text" class="input-text" value="' + v.market_price + '">    </td>    <td class="group_price">        <input type="text" class="input-text" value="' + v.group_price + '">    </td>    <td class="commission">        <input type="text" class="input-text" value="' + v.commission + '">    </td>    <td class="remain">        <input type="text" class="input-text" value="' + v.remain + '">    </td>    <td>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this)">删除</a>    </td></tr>';
         });
         $(".product_add").before(_html);
     }

@@ -18,7 +18,7 @@
                     <tbody>
                     {foreach $list as $item}
                     <tr class="{$item.id} text-c"
-                        data-product='{"base_id":{$item.id}, "product_name":"{$item.product_name}", "self_limit":0, "group_limit":0, "purchase_price":0, "market_price":0,"group_price":0, "commission":0, "remain":0}'>
+                        data-product='{"base_id":{$item.id}, "product_name":"{$item.product_name}", "self_limit":0, "group_limit":0, "purchase_price":0, "market_price":0,"group_price":0, "commission":0, "remain":-1}'>
                         <td>
                             <input type="checkbox" class="checked-{$item.id}" onclick="checkIt(this)">
                         </td>
