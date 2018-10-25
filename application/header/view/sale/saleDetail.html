@@ -9,11 +9,13 @@
                 <thead>
                     <tr class="text-c">
                         <th width="100">商品名称</th>
+                        <th width="100">佣金比例</th>
                         <th width="100">商品进价</th>
                         <th width="100">商品市场价</th>
                         <th width="100">商品团购价</th>
                         <th width="100">销量</th>
                         <th width="100">退货数量</th>
+                        <th width="100">佣金</th>
                         <th width="100">毛利</th>
                     </tr>
                 </thead>
@@ -22,6 +24,9 @@
                 <tr class="text-c va-m">
                     <td>
                         {$item.product_name}
+                    </td>
+                    <td>
+                        {$item.commission}%
                     </td>
                     <td>
                         {$item.purchase_price}
@@ -39,13 +44,23 @@
                         {$item.refund_num}
                     </td>
                     <td>
-                        {:round(($item.group_price-$item.purchase_price)*$item.sell_num, 2)}
+                        {:round(($item.group_price*$item.commission/100)*$item.sell_num, 3)}
+                    </td>
+                    <td>
+                        {:round(($item.group_price*(100-$item.commission)/100-$item.purchase_price)*$item.sell_num, 3)}
                     </td>
                 </tr>
                 {/foreach}
                 </tbody>
             </table>
-            当前军团总毛利： {$amount} &nbsp;&nbsp;&nbsp;<button class="btn btn-primary radius size-M" type="button" onclick="downGroup('{$group.id}')">下载军团销售记录</button>
+            <div>
+                <span>当前军团红包费用： {$coupon_fee} &nbsp;&nbsp;&nbsp;</span>
+                <span>当前军团佣金数量： {$commission} &nbsp;&nbsp;&nbsp;</span>
+                <span>当前军团总营业额： {$sell_total} &nbsp;&nbsp;&nbsp;</span>
+                <span>当前军团总毛利： {$amount-$coupon_fee-$commission} &nbsp;&nbsp;&nbsp;</span>
+            </div>
+
+            <button class="btn btn-primary radius size-M" type="button" onclick="downGroup('{$group.id}')">下载军团销售记录</button>
         </div>
     </div>
 </div>

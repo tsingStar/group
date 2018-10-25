@@ -110,6 +110,7 @@ function test_tel($telephone)
 function captcha_src()
 {
 
+
 }
 
 /**
@@ -357,14 +358,14 @@ function uploadFile($name)
             foreach ($file as $item) {
                 $info = $item->move(__UPLOAD__);
                 $saveName = $info->getSaveName();
-                $path = __URL__ . "/upload/" . $saveName;
+                $path = "https://www.ybt9.com/upload/" . $saveName;
                 $file_url[] = $path;
             }
             $result_url = $file_url;
         } else {
             $info = $file->move(__UPLOAD__);
             $saveName = $info->getSaveName();
-            $path = __URL__ . "/upload/" . $saveName;
+            $path = "https://www.ybt9.com/upload/" . $saveName;
             $result_url = $path;
         }
     } else {

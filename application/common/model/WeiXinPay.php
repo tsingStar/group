@@ -239,25 +239,25 @@ class WeiXinPay
     public function sendRedPack($order)
     {
 
-        $inputObj = new \WxSendRedPack();
-        $inputObj->SetMchBillNo($order["order_no"]);
-        $inputObj->SetMchId(config("weixin.mch_id"));
-        $inputObj->SetActName($order["act_name"]);
-        $inputObj->SetAppId(config("weixin.app_id"));
-        $inputObj->SetAmount($order["amount"]*100);
-        if(isset($order["consume_mch_id"])){
-            $inputObj->SetConsumeMchId($order["consume_mch_id"]);
-        }
-        if(isset($order["risk_info"])){
-            $inputObj->SetRiskInfo($order["risk_info"]);
-        }
-        $inputObj->SetWishing($order["wishing"]);
-        $inputObj->SetTotalNum($order["total_num"]);
-        $inputObj->SetReOpenId($order["open_id"]);
-        if(isset($order["open_id"])){
-            $inputObj->SetSceneId($order["scene_id"]);
-        }
-        $inputObj->SetSendName();
+//        $inputObj = new \WxSendRedPack();
+//        $inputObj->SetMchBillNo($order["order_no"]);
+//        $inputObj->SetMchId(config("weixin.mch_id"));
+//        $inputObj->SetActName($order["act_name"]);
+//        $inputObj->SetAppId(config("weixin.app_id"));
+//        $inputObj->SetAmount($order["amount"]*100);
+//        if(isset($order["consume_mch_id"])){
+//            $inputObj->SetConsumeMchId($order["consume_mch_id"]);
+//        }
+//        if(isset($order["risk_info"])){
+//            $inputObj->SetRiskInfo($order["risk_info"]);
+//        }
+//        $inputObj->SetWishing($order["wishing"]);
+//        $inputObj->SetTotalNum($order["total_num"]);
+//        $inputObj->SetReOpenId($order["open_id"]);
+//        if(isset($order["open_id"])){
+//            $inputObj->SetSceneId($order["scene_id"]);
+//        }
+//        $inputObj->SetSendName($order["send_name"]);
 
 
 

@@ -34,7 +34,7 @@ class Group extends ShopBase
         if (isset($param["group_title"]) && $param["group_title"] != "") {
             $where["group_title"] = ['like', '%' . $param['group_title'] . '%'];
         }
-        $list = HeaderGroup::where($where)->order('create_time')->paginate(10);
+        $list = HeaderGroup::where($where)->order('create_time desc')->paginate(10);
         $this->assign('list', $list);
         $this->assign("param", $param);
         return $this->fetch();

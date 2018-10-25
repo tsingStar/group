@@ -20,7 +20,7 @@ class HeaderGroupProductSwiper extends Model
 
     public function getSwiper($pid)
     {
-        return $this->where("header_group_product_id", $pid)->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+        return $this->where("header_group_product_id", $pid)->field('swiper_type types, swiper_url urlImg')->order("create_time")->select();
     }
 
 }

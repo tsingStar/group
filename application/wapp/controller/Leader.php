@@ -53,7 +53,8 @@ class Leader extends Controller
         }
         $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc')->order("ord")->select();
         foreach ($product__list as $item) {
-            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+            $item['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($item["id"]);
         }
         $group['product_list'] = $product__list;
         //若为自提团长选择自提点
@@ -275,7 +276,8 @@ class Leader extends Controller
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field("id, leader_id, header_group_id, group_id, header_product_id, product_name, commission, market_price, group_price, group_limit, self_limit, product_desc")->order('ord')->select();
         foreach ($product_list as $item) {
 //            $item['product_img'] = model('GroupProductSwiper')->where('group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
-            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+            $item['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($item["header_product_id"]);
         }
         $group['product_list'] = $product_list;
         //若为自提团长选择自提点
@@ -322,7 +324,8 @@ class Leader extends Controller
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, product_name, product_desc, commission, market_price, group_price, header_product_id')->order("ord")->select();
         foreach ($product_list as $value) {
 //            $value['product_img'] = model('GroupProductSwiper')->where('group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->find();
-            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+            $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
         }
         //获取显示状态
         $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
@@ -971,6 +974,30 @@ class Leader extends Controller
             "list" => $list
         ];
         exit_json(1, '请求成功', $data);
+    }
+
+    /**
+     * 获取海报
+     */
+    public function drawImage()
+    {
+        //663 664 665 666 45
+        $group_id = input("group_id");
+        $product_id = input("product_id");
+        $leader_id = input("leader_id");
+        if(file_exists(__UPLOAD__."/erweima/".$group_id."-".$product_id.".png")){
+            exit_json(1, "请求成功", ["imgUrl"=>"http://".__URI__."/upload"."/erweima/".$group_id."-".$product_id.".png"]);
+        }
+        $group = model("Group")->where("id", $group_id)->find();
+        $product = model("GroupProduct")->where("id", $product_id)->find();
+        $product["image"] = model("HeaderGroupProductSwiper")->where("header_group_product_id", $product["header_product_id"])->order("swiper_type")->value("swiper_url");
+        $leader = model("User")->where("id", $leader_id)->field("user_name name, avatar header_image")->find();
+        try{
+            $image_url = \ImageDraw::drawImage($product, $leader, $group);
+            exit_json(1, "请求成功", ["imgUrl"=>$image_url]);
+        }catch (\Exception $e){
+            exit_json(-1, "海报生成失败");
+        }
     }
 
 

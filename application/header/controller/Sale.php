@@ -58,9 +58,17 @@ class Sale extends ShopBase
         $group = model("HeaderGroup")->where("id", $group_id)->find();
         $list = model("HeaderGroupProduct")->where("header_group_id", $group_id)->select();
         $amount = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("(group_price-purchase_price)*sell_num");
+        $commission = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("group_price*sell_num*commission/100");
+        $sell_total = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("group_price*sell_num");
+        //获取当前军团红包使用费用
+        $coupon_fee = db("CouponRecord")->where("header_group_id", $group_id)->where("status", 1)->sum("coupon");
+        $coupon_fee = round($coupon_fee, 2);
         $this->assign("list", $list);
         $this->assign("group", $group);
         $this->assign("amount", $amount);
+        $this->assign("commission", $commission);
+        $this->assign("coupon_fee", $coupon_fee);
+        $this->assign("sell_total", $sell_total);
         return $this->fetch();
     }
 

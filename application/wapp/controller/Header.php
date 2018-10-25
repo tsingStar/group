@@ -310,7 +310,8 @@ class Header extends Controller
             //团购产品列表
             $product_list = model('HeaderGroupProduct')->where('header_group_id', $item['id'])->order("ord")->select();
             foreach ($product_list as $value) {
-                $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->select();
+//                $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['id'])->field('swiper_type types, swiper_url urlImg')->select();
+                $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["id"]);
             }
             $item['product_list'] = $product_list;
         }
@@ -327,7 +328,8 @@ class Header extends Controller
         $group = model('HeaderGroup')->alias('a')->join('Header b', 'a.header_id=b.id')->where('a.id', $group_id)->field('a.id, a.group_title, a.group_notice, a.status, b.nick_name, b.head_image')->find();
         $product_list = model('HeaderGroupProduct')->where('header_group_id', $group_id)->field('id, product_name, remain, sell_num, commission, market_price, group_price, product_desc')->order('ord')->select();
         foreach ($product_list as $item) {
-            $item['img_list'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $item['img_list'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
+            $item['img_list'] = model('HeaderGroupProductSwiper')->getSwiper($item["id"]);
             $item["remain"] = $item["remain"] == -1 ? "无限" : $item["remain"];
         }
         $group['product_list'] = $product_list;
@@ -532,7 +534,7 @@ class Header extends Controller
         if ($keywords) {
             $model->whereLike("group_title", "%$keywords%");
         }
-        $list = $model->field("id, group_title, status")->limit($page * $page_num, $page_num)->order("create_time desc")->select();
+        $list = $model->field("id, group_title, status, commission_status")->limit($page * $page_num, $page_num)->order("create_time desc")->select();
         foreach ($list as $value) {
             $product_list = model("HeaderGroupProduct")->where("header_group_id", $value['id'])->where("sell_num", "gt", 0)->field("product_name, sell_num")->select();
             $value["product_list"] = $product_list;
@@ -658,7 +660,7 @@ class Header extends Controller
                 //同意申请退款
                 $weixin = new WeiXinPay();
                 $order = model("Order")->where("order_no", $refund["order_no"])->find();
-                $refund_money = $refund["num"] * $refund["group_price"];
+                $refund_money = round($refund["num"] * $refund["group_price"],2);
                 $refund_order = [
                     "order_no" => $refund["order_no"],
                     "trade_no" => $order["transaction_id"],

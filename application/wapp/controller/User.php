@@ -127,7 +127,8 @@ class User extends Controller
         }
         $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price')->order('ord')->select();
         foreach ($product_list as $value) {
-            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+            $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
         }
 
         //获取显示状态
@@ -424,7 +425,8 @@ class User extends Controller
         $order = model("Order")->where("order_no", $order_no)->where('user_id', $this->user['id'])->find();
         $product_list = model('OrderDet')->where('order_no', $order_no)->select();
         foreach ($product_list as $item) {
-            $item['product_swiper'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->select();
+//            $item['product_swiper'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
+            $item['product_swiper'] = model('HeaderGroupProductSwiper')->getSwiper($item["header_product_id"]);
         }
         $order['product_list'] = $product_list;
         exit_json(1, '请求成功', $order);
@@ -459,6 +461,31 @@ class User extends Controller
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         $output = curl_exec($ch);
         curl_close($ch);
+        if(!is_null($output)){
+            cache("access_token", null);
+            $access_token = $this->getAccessToken();
+            $ch = curl_init();
+            $url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=" . $access_token;
+            $post_data = [
+                "scene" => $scene,
+                "page" => $page
+            ];
+            curl_setopt($ch, CURLOPT_URL, $url);
+            // 执行后不直接打印出来
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            // 设置请求方式为post
+            curl_setopt($ch, CURLOPT_POST, true);
+            // post的变量
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
+            // 请求头，可以传数组
+    //        curl_setopt($ch, CURLOPT_HEADER, $header);
+            // 跳过证书检查
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            // 不从证书中检查SSL加密算法是否存在
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            $output = curl_exec($ch);
+            curl_close($ch);
+        }
         $path = __UPLOAD__ . '/erweima/';
         is_dir($path) or mkdir($path, "0777");
         $file = md5(get_millisecond()) . ".png";
@@ -530,6 +557,10 @@ class User extends Controller
         $order = model("Order")->where("order_no", $order_no)->where("user_id", $this->user["id"])->find();
         if (!$order) {
             exit_json(-1, "分享订单异常");
+        }
+        $group = model("Group")->where("id", $order["group_id"])->find();
+        if($group["status"] != 1){
+            exit_json(-1, "您与红包擦肩而过，下次努力");
         }
         if ($order["order_money"] - $order["refund_money"] < 9) {
             exit_json(-1, "您与红包擦肩而过，下次努力");
