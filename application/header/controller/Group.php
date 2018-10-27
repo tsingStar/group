@@ -46,6 +46,9 @@ class Group extends ShopBase
     public function add()
     {
         $this->assign("address", $this->getDispatchInfo());
+        $tag_arr = model("ProductTag")->where("header_id", HEADER_ID)->column("tag_name");
+        array_unshift($tag_arr, "");
+        $this->assign("tag_arr", json_encode($tag_arr));
         return $this->fetch();
     }
 
@@ -60,6 +63,9 @@ class Group extends ShopBase
         $this->assign("group", $group);
         $this->assign("product_list", $product_list);
         $this->assign("address", $this->getDispatchInfo());
+        $tag_arr = model("ProductTag")->where("header_id", HEADER_ID)->column("tag_name");
+        array_unshift($tag_arr, "");
+        $this->assign("tag_arr", json_encode($tag_arr));
         return $this->fetch();
     }
 
@@ -138,6 +144,7 @@ class Group extends ShopBase
                     'group_price' => $item['group_price'],
                     'group_limit' => $item['group_limit'],
                     'self_limit' => $item['self_limit'],
+                    'tag_name'=>$item["tag_name"],
                     'ord' => $key,
                     'product_desc' => $pro['desc'],
                 ];
@@ -179,6 +186,7 @@ class Group extends ShopBase
                             'self_limit' => $product_data['self_limit'],
                             'ord' => $product_data['ord'],
                             'product_desc' => $product_data['product_desc'],
+                            'tag_name'=>$product_data['tag_name'],
                             'header_product_id' => $product_id
                         ];
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();

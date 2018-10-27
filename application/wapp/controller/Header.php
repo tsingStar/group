@@ -105,6 +105,7 @@ class Header extends Controller
                     'group_price' => $item['group_price'],
                     'group_limit' => $item['group_limit'],
                     'self_limit' => $item['self_limit'],
+                    'tag_name'=>isset($item['tag_name'])?$item['tag_name']:"",
                     'ord' => $key,
                     'product_desc' => $item['product_desc'],
                 ];
@@ -147,6 +148,7 @@ class Header extends Controller
                             'self_limit' => $product_data['self_limit'],
                             'ord' => $product_data['ord'],
                             'product_desc' => $product_data['product_desc'],
+                            'tag_name'=>$product_data['tag_name'],
                             'header_product_id' => $product_id
                         ];
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();
@@ -1085,6 +1087,15 @@ class Header extends Controller
             default:
                 exit_json(-1, "明细不存在");
         }
+    }
+
+    /**
+     * 获取标签数据
+     */
+    public function getTagName()
+    {
+        $tag_arr = model("ProductTag")->where("header_id", $this->header_id)->column("tag_name");
+        exit_json(1, "获取成功", $tag_arr);
     }
 
 

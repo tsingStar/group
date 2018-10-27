@@ -125,10 +125,10 @@ class User extends Controller
             db("Uv")->insert(["user_id" => $this->user["id"], "group_id" => $group_id]);
             $group->save(["scan_num" => $group["scan_num"] + 1]);
         }
-        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price')->order('ord')->select();
+        $product_list = model('GroupProduct')->alias("a")->join("HeaderGroupProduct b", "a.header_product_id=b.id")->where('a.group_id', $group_id)->field('a.id, a.leader_id, a.header_group_id, a.group_id, a.header_product_id, a.product_name, a.product_desc, a.commission, a.market_price, a.group_price, a.tag_name, b.remain')->order('a.ord')->select();
         foreach ($product_list as $value) {
 //            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
-            $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
+            $value['product_img'] = model('HeaderG roupProductSwiper')->getSwiper($value["header_product_id"]);
         }
 
         //获取显示状态

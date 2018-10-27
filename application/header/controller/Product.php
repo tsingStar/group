@@ -125,7 +125,7 @@ class Product extends ShopBase
     public function getHistory()
     {
         $pro_list = model("Product")->where("header_id", HEADER_ID)->select();
-        foreach ($pro_list as $item){
+        foreach ($pro_list as $item) {
             $item["record_list"] = model("HeaderGroupProduct")->where("base_id", $item["id"])->select();
         }
         $this->assign("list", $pro_list);
@@ -142,7 +142,55 @@ class Product extends ShopBase
         exit_json(1, "请求成功", $record_list);
     }
 
+    /**
+     * 商品标签列表
+     */
+    public function tagList()
+    {
+        $list = model("ProductTag")->where("header_id", session(config("headerKey")))->select();
+        $this->assign("list", $list);
+        return $this->fetch();
+    }
 
+    /**
+     * 添加编辑标签
+     */
+    public function addTag()
+    {
+        $data = input("post.");
+        $id = input("id");
+        $item = model("ProductTag")->where("id", $id)->find();
+        if (request()->isAjax()) {
+            if ($item) {
+                $res = $item->save($data);
+            } else {
+                $data["header_id"] = HEADER_ID;
+                $res = model("ProductTag")->save($data);
+            }
+            if ($res) {
+                exit_json();
+            } else {
+                exit_json(-1, '保存失败');
+            }
+        }
+        $this->assign("item", $item);
+        return $this->fetch();
 
+    }
+
+    /**
+     * 删除标签
+     */
+    public function delTag()
+    {
+        $id = input("idstr");
+        $res = model("ProductTag")->where("id", $id)->delete();
+        if($res){
+            exit_json();
+        }else{
+            exit_json(-1,'删除失败，刷新后重试');
+        }
+
+    }
 
 }

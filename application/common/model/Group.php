@@ -33,6 +33,7 @@ class Group extends Model
                 $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
             }
             $item['product_list'] = $product_list;
+
         }
         return $list;
 

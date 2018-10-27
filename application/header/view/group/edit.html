@@ -74,7 +74,8 @@
             <div class="formControls col-xs-8 col-sm-9">
                 <table class="table table-border table-bordered text-c">
                     <tr class="text-c">
-                        <th>商品名称</th>
+                        <th width="200">商品名称</th>
+                        <th width="100">商品标签</th>
                         <th>团限购</th>
                         <th>团员限购</th>
                         <th>进货价</th>
@@ -90,6 +91,19 @@
                         <input type="hidden" name="base_id" value="{$item.base_id}"/>
                         <td class="product_name">
                             <input type="text" class="input-text" value="{$item.product_name}">
+                        </td>
+                        <td class="tags_name">
+                            <select name="tag_name" id="" class="input-text select">
+                                {foreach :json_decode($tag_arr, true) as $val}
+                                <option value="{$val}" {if $item.tag_name eq $val} selected{/if}>
+                                    {if $val neq ""}
+                                    {$val}
+                                    {else}
+                                    空白标签
+                                    {/if}
+                                </option>
+                                {/foreach}
+                            </select>
                         </td>
                         <td class="group_limit">
                             <input type="text" class="input-text" value="{$item.group_limit}">
@@ -315,6 +329,8 @@
             pro["remain"] = h;
             var base_id = $(v).find("input[name='base_id']").val();
             var id = $(v).find("input[name='id']").val();
+            var tag_name = $(v).find(".tags_name").find("select").val();
+            pro["tag_name"] = tag_name;
             pro["base_id"] = base_id;
             pro["id"] = id;
             pro_arr.push(pro);
@@ -526,9 +542,10 @@
             return ;
         }
         if(pid != ""){
-            layer.confirm("确认删除此商品？", function () {
+            layer.confirm("确认删除此商品？", function (index) {
                 $.post("{:url('Group/delProduct')}", {id:pid}, function(res){
                     if(res.code == 1){
+                        layer.msg("删除成功");
                         pro.remove();
                     }else{
                         layer.msg("删除失败");
@@ -595,10 +612,22 @@
     function saveProducts($products) {
         var _html = "";
         $.each($products, function (i, v) {
-            _html += '<tr class="text-c product"><input type="hidden" name="id" value="0"/><input type="hidden" name="base_id" value="' + v.base_id + '"/>    <td class="product_name">  <input type="text" class="input-text" value="' + v.product_name + '">  </td>    <td class="group_limit">        <input type="text" class="input-text" value="' + v.group_limit + '">    </td>    <td class="self_limit">        <input type="text" class="input-text" value="' + v.self_limit + '">    </td>    <td class="purchase_price">        <input type="text" class="input-text" value="' + v.purchase_price + '">    </td>    <td class="market_price">        <input type="text" class="input-text" value="' + v.market_price + '">    </td>    <td class="group_price">        <input type="text" class="input-text" value="' + v.group_price + '">    </td>    <td class="commission">        <input type="text" class="input-text" value="' + v.commission + '">    </td>    <td class="remain">        <input type="text" class="input-text" value="' + v.remain + '">    </td>    <td>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this, 0, 0)">删除</a>    </td></tr>';
+            _html += '<tr class="text-c product"><input type="hidden" name="id" value="0"/><input type="hidden" name="base_id" value="' + v.base_id + '"/>    <td class="product_name">  <input type="text" class="input-text" value="' + v.product_name + '">  </td> <td class="tags_name">'+tags+'</td>   <td class="group_limit">        <input type="text" class="input-text" value="' + v.group_limit + '">    </td>    <td class="self_limit">        <input type="text" class="input-text" value="' + v.self_limit + '">    </td>    <td class="purchase_price">        <input type="text" class="input-text" value="' + v.purchase_price + '">    </td>    <td class="market_price">        <input type="text" class="input-text" value="' + v.market_price + '">    </td>    <td class="group_price">        <input type="text" class="input-text" value="' + v.group_price + '">    </td>    <td class="commission">        <input type="text" class="input-text" value="' + v.commission + '">    </td>    <td class="remain">        <input type="text" class="input-text" value="' + v.remain + '">    </td>    <td>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveUp(this)">上移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDown(this)">下移</a>        <a href="javascript:;" class="btn btn-primary radius" onclick="moveDel(this, 0, 0)">删除</a>    </td></tr>';
         });
         $(".product_add").before(_html);
     }
 
+    var tags;
+    $(function () {
+        tags = '<select name="tag_name" id="" class="input-text select select-box">\n';
+        $.each({$tag_arr}, function (i, v) {
+            if(v == ""){
+                tags += '    <option value="'+v+'">空白标签</option>\n';
+            }else{
+                tags += '    <option value="'+v+'">'+v+'</option>\n';
+            }
+        });
+        tags += '</select>';
+    });
 </script>
 </html>
