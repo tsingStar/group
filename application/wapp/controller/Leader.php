@@ -51,7 +51,7 @@ class Leader extends Controller
         if ($this->leader['header_id'] != $group['header_id']) {
             exit_json(-1, '你不是当前城主下的团长');
         }
-        $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc')->order("ord")->select();
+        $product__list = model('HeaderGroupProduct')->where(['header_group_id' => $group_id])->field('id, product_name, market_price, group_price, commission, group_limit, self_limit, product_desc, tag_name')->order("ord")->select();
         foreach ($product__list as $item) {
 //            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
             $item['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($item["id"]);
@@ -222,6 +222,7 @@ class Leader extends Controller
                     'group_price' => $item['group_price'],
                     'group_limit' => $item['group_limit'],
                     'self_limit' => $item['self_limit'],
+                    'tag_name' => isset($item["tag_name"]) ? $item["tag_name"] : "",
                     'ord' => $key,
                     'product_desc' => $item['product_desc'],
                 ];
@@ -273,7 +274,7 @@ class Leader extends Controller
         if (!$group || $group['leader_id'] != $this->leader_id) {
             exit_json(-1, '团购信息不存在');
         }
-        $product_list = model('GroupProduct')->where('group_id', $group_id)->field("id, leader_id, header_group_id, group_id, header_product_id, product_name, commission, market_price, group_price, group_limit, self_limit, product_desc")->order('ord')->select();
+        $product_list = model('GroupProduct')->where('group_id', $group_id)->field("id, leader_id, header_group_id, group_id, header_product_id, product_name, commission, market_price, group_price, group_limit, self_limit, product_desc, tag_name")->order('ord')->select();
         foreach ($product_list as $item) {
 //            $item['product_img'] = model('GroupProductSwiper')->where('group_product_id', $item['id'])->field('swiper_type types, swiper_url urlImg')->select();
 //            $item['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
@@ -401,7 +402,7 @@ class Leader extends Controller
     {
         $user = model("User")->where('id', $this->leader_id)->find();
         $data = [
-            'total_money' => $user['amount_able'] + $user['amount_lock'],
+            'total_money' => round($user['amount_able'] + $user['amount_lock'],2),
             'amount_able' => $user['amount_able']
         ];
         exit_json(1, '请求成功', $data);
@@ -951,6 +952,7 @@ class Leader extends Controller
         $num = model("Order")->where("group_id", $group_id)->where("leader_id", $this->leader_id)->count();
         exit_json(1, "请求成功", ["num" => $num]);
     }
+
     /**
      * 获取团购访问记录
      */
@@ -962,10 +964,10 @@ class Leader extends Controller
         $page = input("page");
         $page_num = input("page_num");
         $model = model("GroupRecord")->where("group_id", $group_id);
-        if($status == 1){
+        if ($status == 1) {
             $model->where("status", $status);
         }
-        $list = $model->limit($page*$page_num, $page_num)->order("create_time desc")->select();
+        $list = $model->limit($page * $page_num, $page_num)->order("create_time desc")->select();
         $look_num = model("GroupRecord")->where("group_id", $group_id)->count();
         $buy_num = model("GroupRecord")->where("group_id", $group_id)->where("status", 1)->count();
         $data = [
@@ -985,17 +987,17 @@ class Leader extends Controller
         $group_id = input("group_id");
         $product_id = input("product_id");
         $leader_id = input("leader_id");
-        if(file_exists(__UPLOAD__."/erweima/".$group_id."-".$product_id.".png")){
-            exit_json(1, "请求成功", ["imgUrl"=>"http://".__URI__."/upload"."/erweima/".$group_id."-".$product_id.".png"]);
+        if (file_exists(__UPLOAD__ . "/erweima/" . $group_id . "-" . $product_id . ".png")) {
+            exit_json(1, "请求成功", ["imgUrl" => "http://" . __URI__ . "/upload" . "/erweima/" . $group_id . "-" . $product_id . ".png"]);
         }
         $group = model("Group")->where("id", $group_id)->find();
         $product = model("GroupProduct")->where("id", $product_id)->find();
         $product["image"] = model("HeaderGroupProductSwiper")->where("header_group_product_id", $product["header_product_id"])->order("swiper_type")->value("swiper_url");
         $leader = model("User")->where("id", $leader_id)->field("user_name name, avatar header_image")->find();
-        try{
+        try {
             $image_url = \ImageDraw::drawImage($product, $leader, $group);
-            exit_json(1, "请求成功", ["imgUrl"=>$image_url]);
-        }catch (\Exception $e){
+            exit_json(1, "请求成功", ["imgUrl" => $image_url]);
+        } catch (\Exception $e) {
             exit_json(-1, "海报生成失败");
         }
     }

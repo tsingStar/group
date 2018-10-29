@@ -60,6 +60,10 @@ $leftmenu = [
                 'navName'=>'产品列表',
                 'url'=>'Product/index'
             ],
+            [
+                'navName'=>'产品标签',
+                'url'=>'Product/tagList'
+            ],
 //            [
 //                'navName'=>'产品库存',
 //                'url'=>'Product/remain'
@@ -77,6 +81,10 @@ $leftmenu = [
                 'navName'=>'新建团购',
                 'url'=>'Group/add'
             ],
+            [
+                'navName'=>'商品预热图',
+                'url'=>'Product/readyImg'
+            ]
         ]
     ],
     [

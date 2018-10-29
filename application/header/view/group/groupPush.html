@@ -1,0 +1,55 @@
+{include file='pub/header'/}
+<title>新建团购</title>
+</head>
+<body>
+<div class="page-container">
+    <div class="mt-20 ml-20">
+        <button class="btn btn-primary radius" onclick="checkAll()"><i class="Hui-iconfont Hui-iconfont-duigou"></i> 全选</button>
+        <button class="btn btn-primary radius" onclick="cancelAll()"><i class="Hui-iconfont Hui-iconfont-close"></i>取消全选</button>
+        <button class="btn btn-primary radius" onclick="pushLeader({$group_id})"><i class="Hui-iconfont Hui-iconfont-fabu"></i>推送</button>
+    </div>
+    <div class="cl mt-20">
+        {foreach $list as $item}
+        <div class="f-l text-c mr-20 bk-gray mb-20">
+            <label>
+            <div>
+                <img src="{$item.avatar}" alt="" style="width: 80px; height: 80px;">
+            </div>
+            <div>
+                <span>
+                    <input type="checkbox" value="{$item.id}" {if in_array($item.id, $leader)} checked{/if}>&nbsp;&nbsp;{$item.name}
+                </span>
+            </div>
+            </label>
+        </div>
+        {/foreach}
+    </div>
+</div>
+</body>
+{include file="pub/footer"/}
+<script type="text/javascript">
+    function checkAll(){
+        $("input[type=checkbox]").prop("checked", true);
+    }
+
+    function cancelAll(){
+        $("input[type=checkbox]").prop("checked", false);
+    }
+
+    function pushLeader(group_id){
+        let list = [];
+        let leader = $("input[type=checkbox]:checked");
+        $.each(leader, function (i, v) {
+            list.push($(v).val());
+        });
+        let leader_id = list.join(",");
+        $.post("{:url('addPush')}", {group_id:group_id, leader_id:leader_id}, function (res) {
+            if(res.code == 1){
+                layer.msg("推送成功");
+            }else{
+                layer.msg(res.msg);
+            }
+        });
+    }
+</script>
+</html>

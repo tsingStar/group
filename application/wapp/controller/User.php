@@ -128,7 +128,7 @@ class User extends Controller
         $product_list = model('GroupProduct')->alias("a")->join("HeaderGroupProduct b", "a.header_product_id=b.id")->where('a.group_id', $group_id)->field('a.id, a.leader_id, a.header_group_id, a.group_id, a.header_product_id, a.product_name, a.product_desc, a.commission, a.market_price, a.group_price, a.tag_name, b.remain')->order('a.ord')->select();
         foreach ($product_list as $value) {
 //            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
-            $value['product_img'] = model('HeaderG roupProductSwiper')->getSwiper($value["header_product_id"]);
+            $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
         }
 
         //获取显示状态
@@ -224,7 +224,7 @@ class User extends Controller
 
         //军团库存数量
         if ($header_product['remain'] != -1 && $header_product['remain'] < $num) {
-            exit_json(-1, '商品库存不足');
+            exit_json(-1, '抱歉，商品已被抢光');
         }
 
         //团员限购
@@ -281,7 +281,7 @@ class User extends Controller
             }
         }
         if ($bol) {
-            exit_json(-1, $pro_name . "库存不足");
+            exit_json(-1, $pro_name . "抱歉，商品已被抢光");
         }
         $order_no = getOrderNo();
 //        if (count($pro_arr) == 0) {
@@ -478,7 +478,7 @@ class User extends Controller
             // post的变量
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
             // 请求头，可以传数组
-    //        curl_setopt($ch, CURLOPT_HEADER, $header);
+            //        curl_setopt($ch, CURLOPT_HEADER, $header);
             // 跳过证书检查
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             // 不从证书中检查SSL加密算法是否存在

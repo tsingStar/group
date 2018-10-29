@@ -291,4 +291,33 @@ class Group extends ShopBase
         return $this->fetch();
     }
 
+    /**
+     * 团购推送
+     */
+    public function groupPush()
+    {
+        $header_id = HEADER_ID;
+        $group_id = input("group_id");
+        $list = model("User")->field("id, user_name, avatar,name")->where("header_id", $header_id)->where("role_status", 2)->select();
+        $leader = model("GroupPush")->where("header_id", $header_id)->where("group_id", $group_id)->column("leader_id");
+        $this->assign("list", $list);
+        $this->assign("leader", $leader);
+        $this->assign("group_id", $group_id);
+        return $this->fetch();
+    }
+
+    /**
+     * 推送团购
+     */
+    public function addPush()
+    {
+        $group_id = input("group_id");
+        model("GroupPush")->where("header_id", HEADER_ID)->select();
+
+
+
+        exit_json();
+        
+    }
+
 }
