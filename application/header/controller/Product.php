@@ -193,4 +193,16 @@ class Product extends ShopBase
 
     }
 
+    /**
+     * 商品预热图
+     */
+    public function readyImg()
+    {
+
+        $list = model("PreImage")->where("header_id", HEADER_ID)->select();
+        $this->assign("list", $list);
+        return $this->fetch();
+
+    }
+
 }

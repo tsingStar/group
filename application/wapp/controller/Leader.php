@@ -159,6 +159,10 @@ class Leader extends Controller
      */
     public function saveGroup()
     {
+        $p = model("GroupPush")->where("leader_id", $this->leader_id)->where("group_id", input("header_group_id"))->find();
+        if($p){
+            $p->save(["status"=>1]);
+        }
         $data = [
             //军团id
             'header_group_id' => input('header_group_id'),
@@ -1000,6 +1004,24 @@ class Leader extends Controller
         } catch (\Exception $e) {
             exit_json(-1, "海报生成失败");
         }
+    }
+
+    /**
+     * 获取是否有需要编辑的军团
+     */
+    public function getReadyGroup()
+    {
+        $leader_id = $this->leader_id;
+        $res = model("GroupPush")->where("leader_id", $leader_id)->where("status", 0)->order("create_time desc")->find();
+        if($res){
+            exit_json(1, "", [
+                "group_id"=>$res["group_id"],
+                "header_id"=>$res["header_id"]
+            ]);
+        }else{
+            exit_json(-1, "暂无待编辑团购");
+        }
+        
     }
 
 

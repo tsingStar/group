@@ -1,5 +1,5 @@
 {include file='pub/header'/}
-<title>新建团购</title>
+<title>团长列表</title>
 </head>
 <body>
 <div class="page-container">
@@ -35,6 +35,11 @@
     function cancelAll(){
         $("input[type=checkbox]").prop("checked", false);
     }
+    $(function () {
+        if($("input[type=checkbox]").length == 0){
+            layer.alert("您名下暂无团长哦");
+        }
+    });
 
     function pushLeader(group_id){
         let list = [];
@@ -42,10 +47,17 @@
         $.each(leader, function (i, v) {
             list.push($(v).val());
         });
+        if(list.length == 0){
+            layer.alert("您还未选择团长");
+            return;
+        }
         let leader_id = list.join(",");
         $.post("{:url('addPush')}", {group_id:group_id, leader_id:leader_id}, function (res) {
             if(res.code == 1){
                 layer.msg("推送成功");
+                setTimeout(function () {
+                    layer_close();
+                }, 888);
             }else{
                 layer.msg(res.msg);
             }

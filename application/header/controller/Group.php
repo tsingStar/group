@@ -13,6 +13,7 @@ use app\common\model\HeaderGroup;
 use app\common\model\HeaderGroupProduct;
 use app\common\model\HeaderGroupProductSwiper;
 use think\Exception;
+use think\Log;
 
 class Group extends ShopBase
 {
@@ -144,7 +145,7 @@ class Group extends ShopBase
                     'group_price' => $item['group_price'],
                     'group_limit' => $item['group_limit'],
                     'self_limit' => $item['self_limit'],
-                    'tag_name'=>$item["tag_name"],
+                    'tag_name' => $item["tag_name"],
                     'ord' => $key,
                     'product_desc' => $pro['desc'],
                 ];
@@ -186,7 +187,7 @@ class Group extends ShopBase
                             'self_limit' => $product_data['self_limit'],
                             'ord' => $product_data['ord'],
                             'product_desc' => $product_data['product_desc'],
-                            'tag_name'=>$product_data['tag_name'],
+                            'tag_name' => $product_data['tag_name'],
                             'header_product_id' => $product_id
                         ];
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();
@@ -312,12 +313,20 @@ class Group extends ShopBase
     public function addPush()
     {
         $group_id = input("group_id");
-        model("GroupPush")->where("header_id", HEADER_ID)->select();
-
-
-
+        $leader_list = explode(",", input("leader_id"));
+        foreach ($leader_list as $item) {
+            $r = model("GroupPush")->where("header_id", HEADER_ID)->where("group_id", $group_id)->where("leader_id", $item)->find();
+            if ($r) {
+                $r->save(["status" => 0]);
+            } else {
+                $res = model("GroupPush")->data([
+                    "header_id" => HEADER_ID,
+                    "group_id" => $group_id,
+                    "leader_id" => $item
+                ])->isUpdate(false)->save();
+            }
+        }
         exit_json();
-        
     }
 
 }
