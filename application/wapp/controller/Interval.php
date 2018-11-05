@@ -10,7 +10,6 @@ namespace app\wapp\controller;
 
 
 use app\common\model\Group;
-use app\common\model\WeiXinPay;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -30,13 +29,11 @@ class Interval extends Controller
         ignore_user_abort(true);
         set_time_limit(0);
         echo "启动成功";
-        $i = 1;
-        while ($i<20){
+        while (true){
             file_get_contents("https://www.ybt9.com/wapp/Interval/closeGroup");
             ob_flush();
             flush();
             sleep(1);
-            $i++;
         }
         exit();
     }
@@ -54,6 +51,7 @@ class Interval extends Controller
         try {
             foreach ($list as $key=>$value) {
                 $group_id = $value["id"];
+                model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
                 $res = $value->save(["status" => 2]);
                 if ($res) {
 //                    model("Group")->isUpdate(true)->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
@@ -87,6 +85,4 @@ class Interval extends Controller
         }
         exit("ok");
     }
-
-
 }

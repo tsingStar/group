@@ -1,0 +1,148 @@
+{include file='pub/header'/}
+<title>图片库</title>
+<style>
+    .image_list{
+        border: 1px solid #000;
+    }
+
+
+
+</style>
+</head>
+<body>
+<div class="page-container bk-gray">
+
+    <div class="cl pd-5 image_opera">
+
+        <button class="btn btn-primary radius f-r mr-10" onclick="delImage()"><i class="Hui-iconfont Hui-iconfont-duigou"></i>删除已选图片</button>
+        <span class="btn-upload form-group f-r mr-10">
+            <a href="javascript:void();" class="btn btn-primary radius"><i class="Hui-iconfont Hui-iconfont-upload"></i>上传图片</a>
+            <input type="file" onchange="uploadImg(this)" multiple class="input-file" accept="image/*">
+        </span>
+        <button class="btn btn-primary radius f-r mr-10" onclick="checkedImage()"><i class="Hui-iconfont Hui-iconfont-duigou"></i>确定选择</button>
+    </div>
+    <div class="cl image_list pd-20" style="overflow-y: auto;">
+
+    </div>
+
+</div>
+</body>
+{include file="pub/footer"/}
+<script type="text/javascript">
+    var count = 0;
+    var is_go = true;
+    $(function () {
+        let height = $(window).height();
+        $(".image_list").height(height*0.85-60);
+        var nScrollHight = 0; //滚动距离总长(注意不是滚动条的长度)
+        var nScrollTop = 0;   //滚动到的当前位置
+        var nDivHight = $(".image_list").height();
+        loadNextImageList(count);
+        $(".image_list").scroll(function(){
+            nScrollHight = $(this)[0].scrollHeight;
+            nScrollTop = $(this)[0].scrollTop;
+            if(nScrollTop + nDivHight >= nScrollHight-40) {
+                if(is_go === true){
+                    return ;
+                }
+                loadNextImageList(count);
+            }
+        });
+    });
+
+    function loadNextImageList(page){
+        let html = "";
+        is_go = true;
+        $.get("{:url('Index/getImageList')}", {page:page}, function (res) {
+            if(res.code == 1){
+                count++;
+                $.each(res.data, function (i,v) {
+                    html += '<div class="f-l mr-20 mt-20"  onclick="checkIt(this)" style="position: relative;">\n' +
+                        '                <img src="'+v.image_url+'" alt="" style="width: 120px;">\n' +
+                        '            </div>'
+                });
+                $(".image_list").append(html);
+                if(res.data.length == 20){
+                    is_go = false;
+                }
+            }
+        });
+    }
+
+    /**
+     * 上传文件
+     * @param o 点击元素
+     */
+    function uploadImg(o) {
+        var $form = document.createElement("form");
+        $form.setAttribute("action", "/header/Index/uploadFile");
+        $form.setAttribute("method", "POST");
+        $form.setAttribute("enctype", "multipart/form-data");
+        $("body").append($form);
+        var node = $(o).clone(true);
+        node.attr("name", "file[]");
+        node.appendTo($form);
+        var index = layer.load();
+        $($form).ajaxSubmit(function (res) {
+            $($form).remove();
+            if(res.code == 1){
+                layer.msg("上传成功");
+                setTimeout(function () {
+                    location.reload();
+                }, 666);
+            }else{
+                layer.msg("上传失败");
+            }
+        });
+    }
+
+    /**
+     * 确认选择
+     */
+    function checkIt(o) {
+        let mb = $(o).find(".is_checked");
+        let hg = $(o).height();
+        if(mb.length>0){
+            mb.remove();
+        }else{
+            let fs = Math.min(hg, 120)/2;
+        let ck = '<div class="text-c is_checked" style="width: 100%; height: '+hg+'px; background-color: rgba(0,0,0,0.3); position: absolute;"><i class="Hui-iconfont Hui-iconfont-xuanze" style="line-height: '+hg+'px; color: #10b110; font-size: '+fs+'px;"></i></div>';
+            $(o).prepend(ck);
+        }
+    }
+
+    function checkedImage(){
+        let image_arr = [];
+        $.each($(".is_checked"), function(i, v){
+            image_arr.push($(v).parent().find("img").attr("src"));
+        });
+        if(image_arr.length>0){
+            parent.setImage(image_arr);
+        }else{
+            layer.msg("请选择图片");
+        }
+    }
+
+    function delImage(){
+        let image_arr = [];
+        $.each($(".is_checked"), function(i, v){
+            image_arr.push($(v).parent().find("img").attr("src"));
+        });
+        if(image_arr.length>0){
+            layer.confirm("确定从图片库删除此图片？", function () {
+                $.post("{:url('delImage')}", {idstr:image_arr.join(",")}, function(res){
+                    layer.msg(res.msg);
+                    if(res.code == 1){
+                        setTimeout(function () {
+                            location.reload();
+                        }, 666);
+                    }
+                });
+            });
+        }else{
+            layer.msg("请选择图片");
+        }
+    }
+
+</script>
+</html>

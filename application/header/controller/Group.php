@@ -299,7 +299,7 @@ class Group extends ShopBase
     {
         $header_id = HEADER_ID;
         $group_id = input("group_id");
-        $list = model("User")->field("id, user_name, avatar,name")->where("header_id", $header_id)->where("role_status", 2)->select();
+        $list = model("User")->field("id, user_name, avatar,name,residential")->where("header_id", $header_id)->where("role_status", 2)->select();
         $leader = model("GroupPush")->where("header_id", $header_id)->where("group_id", $group_id)->column("leader_id");
         $this->assign("list", $list);
         $this->assign("leader", $leader);
@@ -313,6 +313,10 @@ class Group extends ShopBase
     public function addPush()
     {
         $group_id = input("group_id");
+        $g = model("HeaderGroup")->where("id", $group_id)->find();
+        if($g && $g["status"] == 2){
+            exit_json(-1, "团购已结束");
+        }
         $leader_list = explode(",", input("leader_id"));
         foreach ($leader_list as $item) {
             $r = model("GroupPush")->where("header_id", HEADER_ID)->where("group_id", $group_id)->where("leader_id", $item)->find();

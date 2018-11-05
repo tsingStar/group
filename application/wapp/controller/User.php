@@ -217,24 +217,33 @@ class User extends Controller
             exit_json(-1, "团购未开启或已结束");
         }
         $num = input('num');
-        $product = model('GroupProduct')->where('id', $product_id)->find();
-        $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
-        $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
-        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
+        $lock1 = fopen(__PUBLIC__ . "/lock1.txt", "w");
+        if(flock($lock1, LOCK_EX)){
 
-        //军团库存数量
-        if ($header_product['remain'] != -1 && $header_product['remain'] < $num) {
-            exit_json(-1, '抱歉，商品已被抢光');
-        }
+            $product = model('GroupProduct')->where('id', $product_id)->find();
+            $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
+            $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
+            $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
 
-        //团员限购
-        if ($product['self_limit'] > 0 && $product['self_limit'] < $self_num + $num) {
-            exit_json(-1, '商品个人限购' . $product['self_limit'] . '件');
-        }
+            flock($lock1, LOCK_UN);
+            fclose($lock1);
+            //军团库存数量
+            if ($header_product['remain'] != -1 && $header_product['remain'] < $num) {
+                exit_json(-1, '抱歉，商品已被抢光');
+            }
 
-        //团限购
-        if ($product['group_limit'] > 0 && $group_num + $num > $product['group_limit']) {
-            exit_json(-1, '该商品团限购' . $product['group_limit'] . '件，还剩' . ($num - 1));
+            //团员限购
+            if ($product['self_limit'] > 0 && $product['self_limit'] < $self_num + $num) {
+                exit_json(-1, '商品个人限购' . $product['self_limit'] . '件');
+            }
+
+            //团限购
+//            if ($product['group_limit'] > 0 && $group_num + $num > $product['group_limit']) {
+//                exit_json(-1, '该商品团限购' . $product['group_limit'] . '件，还剩' . ($num - 1));
+//            }
+            if ($header_product['group_limit'] > 0 && $num > $product['group_limit']) {
+                exit_json(-1, '该商品团限购' . $header_product['group_limit'] . '件，还剩' . ($num - 1));
+            }
         }
 
         exit_json(1, '库存充足');
@@ -245,55 +254,68 @@ class User extends Controller
      */
     public function checkOrder()
     {
+
         $product_list = input("product_list/a");
 
 
-        //TODO 待处理，上次锁定库存未释放,已处理，不确定是否有未处理bug
-        $remain_order = model("OrderRemainPre")->where("user_id", $this->user['id'])->where("status", 0)->select();
-        $weixin = new WeiXinPay();
-        foreach ($remain_order as $value) {
-            $r = $weixin->orderQuery($value["order_no"]);
-            if (!$r) {
-                $value->save(["status" => 2]);
-                $p_list = json_decode($value["product_info"], true);
-                foreach ($p_list as $item) {
-                    model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+        $lock = fopen(__PUBLIC__ . "/lock.txt", "w");
+        if (flock($lock, LOCK_EX)) {
+            //TODO 待处理，上次锁定库存未释放,已处理，不确定是否有未处理bug
+            $remain_order = model("OrderRemainPre")->where("user_id", $this->user['id'])->where("status", 0)->select();
+            $weixin = new WeiXinPay();
+            foreach ($remain_order as $value) {
+                $r = $weixin->orderQuery($value["order_no"]);
+//            $r = false;
+                if (!$r) {
+                    $value->save(["status" => 2]);
+                    $p_list = json_decode($value["product_info"], true);
+                    foreach ($p_list as $item) {
+                        model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+                    }
                 }
             }
-        }
+            $bol = false;
+            $pro_name = "";
+            $pro_arr = [];
+            foreach ($product_list as $item) {
+                $pro = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
+                if ($pro["remain"] != -1) {
+                    if ($pro["remain"] < $item["num"]) {
+                        $bol = true;
+                        $pro_name .= $item["product_name"] . "、";
+                    } else {
+                        if($pro["group_limit"]>0){
+                            $pro_arr[] = [
+                                "header_product_id" => $item["header_product_id"],
+                                "num" => $item["num"],
+                                "product_id"=>$item["id"],
+                                "is_group"=>true
+                            ];
+                        }else{
+                            $pro_arr[] = [
+                                "header_product_id" => $item["header_product_id"],
+                                "num" => $item["num"],
+                                "product_id"=>$item["id"],
+                                "is_group"=>false
+                            ];
+                        }
+                    }
+                }
 
-
-        $bol = false;
-        $pro_name = "";
-        $pro_arr = [];
-        foreach ($product_list as $item) {
-            $pro = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
-            if ($pro["remain"] != -1) {
-                if ($pro["remain"] < $item["num"]) {
-                    $bol = true;
-                    $pro_name .= $item["product_name"] . "、";
-                } else {
-                    $pro_arr[] = [
-                        "header_product_id" => $item["header_product_id"],
-                        "num" => $item["num"]
-                    ];
+            }
+            if ($bol) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+                exit_json(-1, $pro_name . "抱歉，商品已被抢光");
+            }
+            $order_no = getOrderNo();
+            foreach ($pro_arr as $val) {
+                model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
+                if($val["is_group"]){
+                    model("GroupProduct")->where("id", $val["product_id"])->setDec("group_limit", $val["num"]);
                 }
             }
-        }
-        if ($bol) {
-            exit_json(-1, $pro_name . "抱歉，商品已被抢光");
-        }
-        $order_no = getOrderNo();
-//        if (count($pro_arr) == 0) {
-//            exit_json(1, "请求成功", ["order_no" => $order_no]);
-//        }
-        foreach ($pro_arr as $val) {
-            model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
-        }
-        $order = model("OrderRemainPre")->where("order_no", $order_no)->find();
-        if ($order) {
-            exit_json(1, "请求成功", ["order_no" => $order_no]);
-        } else {
+
             $res = model("OrderRemainPre")->insert([
                 "user_id" => $this->user["id"],
                 "order_no" => $order_no,
@@ -301,11 +323,17 @@ class User extends Controller
                 "create_time" => time(),
                 "status" => 0
             ]);
+            flock($lock, LOCK_UN);
+            fclose($lock);
             if ($res) {
                 exit_json(1, '请求成功', ["order_no" => $order_no]);
             } else {
                 exit_json(-1, "订单生成失败");
             }
+        } else {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            exit_json(-1, "系统异常");
         }
     }
 
@@ -461,7 +489,7 @@ class User extends Controller
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         $output = curl_exec($ch);
         curl_close($ch);
-        if(!is_null($output)){
+        if (!is_null($output)) {
             cache("access_token", null);
             $access_token = $this->getAccessToken();
             $ch = curl_init();
@@ -559,7 +587,7 @@ class User extends Controller
             exit_json(-1, "分享订单异常");
         }
         $group = model("Group")->where("id", $order["group_id"])->find();
-        if($group["status"] != 1){
+        if ($group["status"] != 1) {
             exit_json(-1, "您与红包擦肩而过，下次努力");
         }
         if ($order["order_money"] - $order["refund_money"] < 9) {
@@ -596,7 +624,7 @@ class User extends Controller
                     if ($res) {
                         db("CouponRecord")->where("id", $id)->update(["status" => 1]);
                     }
-                    exit_json(1, "恭喜您获得".$amount."元红包，红包会以微信零钱方式发到您手中");
+                    exit_json(1, "恭喜您获得" . $amount . "元红包，红包会以微信零钱方式发到您手中");
                 } else {
                     exit_json(-1, "您与红包擦肩而过，下次努力");
                 }

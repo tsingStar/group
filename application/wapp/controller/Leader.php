@@ -74,6 +74,10 @@ class Leader extends Controller
         $group_id = input('group_id');
         $leader_group = model('Group')->where('header_group_id', $group_id)->where('leader_id', $this->leader_id)->find();
         if ($leader_group) {
+            $p = model("GroupPush")->where("leader_id", $this->leader_id)->where("group_id", input("group_id"))->find();
+            if($p){
+                $p->save(["status"=>1]);
+            }
             exit_json(1, '团购已创建', ['group_id' => $leader_group['id'], 'status' => 1]);
         } else {
             exit_json(1, '团购未创建', ['group_id' => 0, 'status' => -1]);
@@ -471,7 +475,7 @@ class Leader extends Controller
             exit_json(-1, '订单已处理');
         }
         $res1 = $order->save(['pick_status' => 1]);
-        $res2 = model("OrderDet")->save(["status" => 3], ['status' => 0]);
+        $res2 = model("OrderDet")->save(["status" => 3], ['status' => 0, 'order_no'=>$order_no]);
         if ($res1) {
             exit_json();
         } else {
@@ -1022,6 +1026,15 @@ class Leader extends Controller
             exit_json(-1, "暂无待编辑团购");
         }
         
+    }
+
+    /**
+     * 获取预热图
+     */
+    public function getReadyImage()
+    {
+        $image_list = model("PreImage")->where("header_id", $this->leader["header_id"])->column("image_url");
+        exit_json(1, "请求成功", ["image_list"=>$image_list]);
     }
 
 

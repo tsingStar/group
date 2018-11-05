@@ -17,6 +17,35 @@ use think\Log;
 
 class Pub extends Controller
 {
+
+
+    /**
+     * 获取销售详情
+     */
+    public function getSaleRecord()
+    {
+
+        $list = model("HeaderGroup")->where("header_id", 1)->where("status", 2)->select();
+        $data = [];
+        $extraTitle = [];
+        $header = [];
+        foreach ($list as $item){
+            //遍历每期结束军团
+            $group_list = model("Order")->alias("a")->join("User b", "a.leader_id=b.id")->where("a.header_group_id", $item["id"])->group("a.leader_id")->order("sum(a.order_money-a.refund_money) desc")->field("b.residential, b.name, sum(a.order_money-a.refund_money) sale_money")->select();
+            $temp = [];
+            foreach ($group_list as $v){
+                $temp[] = [$v["residential"], $v["name"], $v["sale_money"]];
+            }
+            $data[] = $temp;
+            $extraTitle[] = substr($item['open_time'], 0, 10);
+            $header[] = ["小区名称", "团长名称", "销售额"];
+        }
+        $file_name = "截止".date("Y-m-d")."军团销售记录";
+        echo excel($header, $data, $file_name, count($data), $extraTitle);
+        exit();
+
+    }
+
     /**
      * 下载军团销售记录
      */
@@ -299,6 +328,9 @@ class Pub extends Controller
                     $pro_list = json_decode($value["product_info"], true);
                     foreach ($pro_list as $item) {
                         model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+                        if(isset($item["is_group"]) && $item["is_group"] == true){
+                            model("GroupProduct")->where("id", $item["product_id"])->setInc("group_limit", $item["num"]);
+                        }
                     }
                 } else {
                     exit();

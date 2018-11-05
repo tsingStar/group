@@ -471,6 +471,7 @@ class Header extends Controller
         if (!$group || $group["status"] == 2) {
             exit_json(-1, "团购不存在或已结束");
         } else {
+            model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
             $res = $group->save(["status" => 2]);
             if ($res) {
                 model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
@@ -791,9 +792,9 @@ class Header extends Controller
 
         $header = model("Header")->where("id", $this->header_id)->find();
 
-        $sum_money = round($sum_money * (1 - 0.006)-$coupon_fee, 2);
+        $sum_money1 = round($sum_money * (1 - 0.006)-$coupon_fee, 2);
         $header->save([
-            "amount_able" => $header["amount_able"] + $sum_money,
+            "amount_able" => $header["amount_able"] + $sum_money1,
             "amount_lock" => $header["amount_lock"] - $sum_money
         ]);
 

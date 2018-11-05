@@ -185,10 +185,10 @@ class Product extends ShopBase
     {
         $id = input("idstr");
         $res = model("ProductTag")->where("id", $id)->delete();
-        if($res){
+        if ($res) {
             exit_json();
-        }else{
-            exit_json(-1,'删除失败，刷新后重试');
+        } else {
+            exit_json(-1, '删除失败，刷新后重试');
         }
 
     }
@@ -202,6 +202,49 @@ class Product extends ShopBase
         $list = model("PreImage")->where("header_id", HEADER_ID)->select();
         $this->assign("list", $list);
         return $this->fetch();
+
+    }
+
+    public function saveReadyImg()
+    {
+        $img_str = input("img_str");
+        if ($img_str == "") {
+            exit_json(-1, "未选择图片");
+        }else{
+            $img_arr = explode(",", $img_str);
+            $data = [];
+            foreach ($img_arr as $item){
+                 $temp = [
+                    "header_id"=>HEADER_ID,
+                    "image_url"=>$item
+                 ];
+                 $r = model("PreImage")->where($temp)->find();
+                 if(!$r){
+                     $data[] = $temp;
+                 }
+            }
+            if(count($data)>0){
+                $res = model("PreImage")->saveAll($data);
+            }else{
+                $res = true;
+            }
+            if($res){
+                exit_json();
+            }else{
+                exit_json(-1, "保存失败");
+            }
+        }
+    }
+
+    public function delReadyImg()
+    {
+        $ids = input("idstr");
+        $res = model("PreImage")->whereIn("id", $ids)->delete();
+        if($res){
+            exit_json();
+        }else{
+            exit_json(-1, "操作失败");
+        }
 
     }
 

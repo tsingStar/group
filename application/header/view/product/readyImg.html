@@ -1,0 +1,86 @@
+{include file='pub/header'/}
+<title>商品预热图</title>
+</head>
+<body>
+<div class="page-container">
+
+    <div class="cl pd-5 bg-1 bk-gray mt-20">
+            <span class="l mr-20">
+                <a class="btn btn-primary radius" onclick="addImage()" href="javascript:;">
+                    <i class="Hui-iconfont Hui-iconfont-add"></i> 添加图片
+                </a>
+            </span>
+            <span class="l mr-20">
+                <a class="btn btn-primary radius" onclick="delImage()" href="javascript:;">
+                    <i class="Hui-iconfont Hui-iconfont-close"></i> 删除选中图片
+                </a>
+            </span>
+
+        <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
+           href="javascript:location.replace(location.href);" title="刷新">
+            <i class="Hui-iconfont">&#xe68f;</i>
+        </a>
+    </div>
+    <div class="cl mt-20">
+        {foreach $list as $val}
+        <div class="f-l bk-gray mr-20 col-2">
+            <label>
+                <input type="checkbox" value="{$val.id}"  style="position: absolute; zoom: 200%; margin-top: 2px; margin-left: 2px; color: rgba(0,0,0,0.8)">
+                <img src="{$val.image_url}" style="width: 100%;" alt="">
+            </label>
+        </div>
+        {/foreach}
+    </div>
+
+</div>
+
+</body>
+{include file="pub/footer"/}
+<script>
+
+    function addImage(){
+        layer_show("选择图片", "{:url('Index/image')}");
+    }
+
+    function delImage(){
+
+        let ck = $("input[type=checkbox]:checked");
+        let ids = [];
+        $.each(ck, function(i,v){
+            ids.push($(v).val());
+        });
+        if(ids.length>0){
+            layer.confirm("确定删除选中图片？", function(){
+                $.post("{:url('Product/delReadyImg')}", {idstr:ids.join(",")}, function(res){
+                    layer.msg(res.msg);
+                    if(res.code == 1){
+                        setTimeout(function () {
+                            location.reload();
+                        }, 666);
+                    }
+                });
+            })
+        }else{
+            layer.msg("请先选中要删除的图片");
+        }
+    }
+
+    function setImage(image_arr){
+        $.post("{:url('Product/saveReadyImg')}", {img_str:image_arr.join(",")}, function (res) {
+            if(res.code == 1){
+                layer.msg("操作成功");
+                setTimeout(function () {
+                    location.reload();
+                }, 666);
+            }else{
+                layer.msg(res.msg);
+            }
+        });
+    }
+
+
+
+
+
+</script>
+</html>
