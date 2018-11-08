@@ -82,7 +82,7 @@
     //下载军团销售记录
     function downGroup(group_id) {
         let iframe = document.createElement("iframe");
-        iframe.setAttribute("src", "https://www.ybt9.com/wapp/Pub/getGroupData?group_id="+group_id);
+        iframe.setAttribute("src", "/wapp/Pub/getGroupData?group_id="+group_id);
         iframe.style.display = "none";
         $("body").append(iframe);
         setTimeout(function () {

@@ -30,15 +30,16 @@ class Order extends Model
 
         foreach ($product_list as $item){
             //军团商品处理
-            $hgp = \model("HeaderGroupProduct")->where("id", $item['header_product_id'])->find();
-            if($hgp["remain"] !=-1){
-//                $remain = $hgp['remain']-$item['num'];
-//                $remain = $remain<0?0:$remain;
-//                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$remain]);
-                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
-            }else{
-                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
-            }
+            $hgp = \model("HeaderGroupProduct")->where("id", $item['header_product_id'])->setInc('sell_num', $item['num']);
+//            $hgp->setInc('sell_num', $item['num']);
+//            if($hgp["remain"] !=-1){
+////                $remain = $hgp['remain']-$item['num'];
+////                $remain = $remain<0?0:$remain;
+////                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$remain]);
+//                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
+//            }else{
+//                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
+//            }
             //团购商品处理
             \model('GroupProduct')->where('id', $item['product_id'])->setInc('sell_num', $item['num']);
         }

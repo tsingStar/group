@@ -476,7 +476,10 @@ class Header extends Controller
             if ($res) {
                 model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
                 //军团销售汇总
-                $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
+//                $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
+
+                //销售核算额外处理
+                /*$sum_money = model("GroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
                 //团购销售汇总
                 $group_list = model("GroupProduct")->where("header_group_id", $group_id)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id, group_id")->select();
                 $sum_money = $sum_money * (1 - 0.006);
@@ -486,7 +489,7 @@ class Header extends Controller
                 $coupon_fee = round($coupon_fee, 2);
 
 
-                model("Header")->where("id", $group["header_id"])->setInc("amount_lock", $sum_money);
+                model("Header")->where("id", $group["header_id"])->setInc("amount_lock", round($sum_money-$coupon_fee,2));
                 model("HeaderMoneyLog")->saveAll([
                     [
                         "header_id" => $group["header_id"],
@@ -503,20 +506,33 @@ class Header extends Controller
 
                 ]);
                 foreach ($group_list as $item) {
-                    model("User")->where("id", $item["leader_id"])->setInc("amount_lock", $item["sum_money"]);
+                    model("User")->where("id", $item["leader_id"])->setInc("amount_lock", $item["sum_money"] * (1 - 0.006));
                     model("LeaderMoneyLog")->data([
                         "leader_id" => $item["leader_id"],
                         "type" => 1,
                         "money" => round($item["sum_money"] * (1 - 0.006), 2),
                         "order_no" => $item["group_id"]
                     ])->isUpdate(false)->save();
-                }
+                }*/
                 exit_json();
             } else {
                 exit_json(-1, "操作失败");
             }
         }
 
+    }
+
+    /**
+     * 军团结算
+     */
+    public function accountGroup()
+    {
+        $group_id = input("group_id");
+        $res = model("HeaderGroup")->comAccount($group_id, $this->header_id);
+        if($res === false){
+            exit_json(-1, model("HeaderGroup")->getError());
+        }
+        exit_json();
     }
 
     /**
@@ -565,7 +581,7 @@ class Header extends Controller
         if ($keywords) {
             $model->where("b.user_name|b.telephone", "like", "%$keywords%");
         }
-        $list = $model->field("a.id, a.pick_status, b.id leader_id, b.user_name")->select();
+        $list = $model->field("a.id, a.pick_status, b.id leader_id, b.user_name, b.name, b.residential, a.pick_address, b.telephone")->select();
         foreach ($list as $value) {
             $value["product_list"] = model("GroupProduct")->where("group_id", $value["id"])->field("sell_num, product_name, group_price")->select();
             $value["refund_money"] = model("Order")->where("group_id", $value["id"])->sum("refund_money");
@@ -604,7 +620,7 @@ class Header extends Controller
         }
         $page = input("page");
         $page_num = input("page_num");
-        $list = model("OrderRefund")->where("header_id", $this->header_id)->where("status", $status)->field("id, product_name, create_time")->limit($page * $page_num, $page_num)->select();
+        $list = model("OrderRefund")->where("header_id", $this->header_id)->where("status", $status)->field("id, product_name, create_time")->order("update_time desc")->limit($page * $page_num, $page_num)->select();
         exit_json(1, "请求成功", $list);
     }
 
@@ -671,13 +687,15 @@ class Header extends Controller
                     "total_money" => $order["order_money"],
                     "refund_money" => $refund_money,
                     "shop_id" => $refund["leader_id"],
-                    "refund_desc" => "团购退款"
+                    "refund_desc" => "团购退款".",".$refund['product_name']."-".$refund["reason"],
+                    "notify_url"=>"https://www.ybt9.com/wapp/Pub/orderRefund"
                 ];
                 Log::error($refund_order);
                 $res = $weixin->refund($refund_order);
                 if ($res) {
+                    //回调处理退款成功
                     //军团退货商品处理
-                    $header_product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
+                    /*$header_product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
                     //团购
                     $group = model("Group")->where("id", $refund["group_id"])->find();
                     $group_product = model("GroupProduct")->where("id", $refund["product_id"])->find();
@@ -736,7 +754,9 @@ class Header extends Controller
                             model("Header")->where("id", $refund["header_id"])->setDec("amount_lock", $money);
                             model("User")->where("id", $refund["leader_id"])->setDec("amount_lock", $commission);
                         }
-                    }
+                    }*/
+
+
                     $refund->save(["status" => 1]);
                     exit_json();
                 } else {
@@ -795,14 +815,14 @@ class Header extends Controller
         $sum_money1 = round($sum_money * (1 - 0.006)-$coupon_fee, 2);
         $header->save([
             "amount_able" => $header["amount_able"] + $sum_money1,
-            "amount_lock" => $header["amount_lock"] - $sum_money
+            "amount_lock" => $header["amount_lock"] - $sum_money1
         ]);
 
         foreach ($group_list as $item) {
             $leader = model("User")->where("id", $item["leader_id"])->find();
             $leader->save([
-                "amount_able" => $leader["amount_able"] + $item["sum_money"] * (1 - 0.006),
-                "amount_lock" => $leader["amount_lock"] - $item["sum_money"] * (1 - 0.006)
+                "amount_able" => round($leader["amount_able"] + $item["sum_money"] * (1 - 0.006), 2),
+                "amount_lock" => round($leader["amount_lock"] - $item["sum_money"] * (1 - 0.006),2)
             ]);
             model("Order")->isUpdate(true)->save(["commission_status" => 1], ["header_group_id" => $group_id]);
         }

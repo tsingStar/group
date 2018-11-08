@@ -83,12 +83,49 @@ class Group extends ShopBase
             $group->status = 1;
             $group->open_time = date("Y-m-d");
             $res = $group->save();
+            model("Group")->save(["status"=>1], ["header_group_id"=>$group_id]);
             if ($res) {
                 exit_json();
             } else {
                 exit_json(-1, "开启失败，刷新后重试");
             }
         }
+    }
+
+    /**
+     * 结束团购
+     */
+    public function closeGroup()
+    {
+        $group_id = input("group_id");
+        $group = model("HeaderGroup")->where("id", $group_id)->where("header_id", HEADER_ID)->find();
+        if (!$group || $group["status"] == 2) {
+            exit_json(-1, "团购不存在或已结束");
+        } else {
+            model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
+            $res = $group->save(["status" => 2]);
+            if ($res) {
+                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
+                exit_json();
+            } else {
+                exit_json(-1, "操作失败");
+            }
+        }
+
+    }
+
+    /**
+     * 结算团购
+     */
+    public function comp()
+    {
+        $group_id = input("group_id");
+        $res = model("HeaderGroup")->comAccount($group_id, HEADER_ID);
+        if($res === false){
+            exit_json(-1, model("HeaderGroup")->getError());
+        }
+        exit_json();
+
     }
 
     /**

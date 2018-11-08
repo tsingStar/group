@@ -34,6 +34,7 @@
                         <th width="100">创建时间</th>
                         <th width="100">开团时间</th>
                         <th width="100">团购状态</th>
+                        <th width="100">结算状态</th>
                         <th width="100">操作</th>
                     </tr>
                 </thead>
@@ -62,13 +63,20 @@
                     <td>
                         {:config('group_status')[$item.status]}
                     </td>
+                    <td>
+                        {if $item.comp_status eq 0}
+                            未结算
+                        {else}
+                            已结算
+                        {/if}
+                    </td>
                     <td class="td-manage">
                         <a style="text-decoration:none" class="ml-5"
                            onClick="group_edit('{$item.id}')"
                            href="javascript:;" title="编辑">
                             <i class="Hui-iconfont Hui-iconfont-edit"></i>团购编辑
                         </a>
-                        {if $item.status eq 0}
+                        {if $item.status eq 0 || ($item.status eq 2 && $item.comp_status eq 0)}
                         <a style="text-decoration:none" class="ml-5"
                            onClick="group_start('{$item.id}')"
                            href="javascript:;" title="开启">
@@ -77,9 +85,23 @@
                         {/if}
                         {if $item.status eq 1}
                         <a style="text-decoration:none" class="ml-5"
+                           onClick="group_close('{$item.id}')"
+                           href="javascript:;" title="推送">
+                            <i class="Hui-iconfont Hui-iconfont-close"></i>结束团购
+                        </a>
+                        {/if}
+                        {if $item.status eq 1}
+                        <a style="text-decoration:none" class="ml-5"
                            onClick="group_push('{$item.id}')"
                            href="javascript:;" title="推送">
                             <i class="Hui-iconfont Hui-iconfont-fabu"></i>推送
+                        </a>
+                        {/if}
+                        {if $item.comp_status eq 0 && $item.status eq 2}
+                        <a style="text-decoration:none" class="ml-5"
+                           onClick="group_comp('{$item.id}')"
+                           href="javascript:;" title="结算">
+                            <i class="Hui-iconfont Hui-iconfont-duigou"></i>团购结算
                         </a>
                         {/if}
                         <!--<a style="text-decoration:none" class="ml-5" onClick="product_del(this,'{$item.id}')"-->
@@ -106,6 +128,33 @@
             content:'{:url(\'Group/edit\')}?group_id='+group_id
         });
         layer.full(index);
+    }
+    //结束团购
+    function group_close(group_id){
+        layer.confirm("确定结束团购？", function () {
+            $.get("{:url('Group/closeGroup')}", {group_id:group_id}, function (res) {
+                if(res.code == 1){
+                    setTimeout(function () {
+                        location.reload();
+                    }, 666)
+                }
+                layer.msg(res.msg);
+            });
+        })
+    }
+
+    //团购结算
+    function group_comp(group_id){
+        layer.confirm("确定结算当前团购？", function () {
+            $.post("{:url('Group/comp')}", {group_id:group_id}, function (res) {
+                layer.msg(res.msg);
+                if(res.code == 1){
+                    setTimeout(function () {
+                        location.reload();
+                    }, 666);
+                }
+            });
+        });
     }
 
     function group_start(group_id){

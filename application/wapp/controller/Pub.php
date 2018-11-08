@@ -311,33 +311,39 @@ class Pub extends Controller
      */
     public function releaseRemain()
     {
+        set_time_limit(0);
+        $lock = fopen(__PUBLIC__ . "/lock_remain.txt", "w");
         try {
-            $list = model("OrderRemainPre")->where("status", 0)->where("create_time", "lt", time() - 301)->select();
-            foreach ($list as $value) {
-                $weixin = new WeiXinPay();
-                $order_no = $value["order_no"];
-                $res = $weixin->orderQuery($order_no);
-                if ($res === true) {
-                    //订单已支付或在支付过程中,库存锁定
+            if(flock($lock, LOCK_EX|LOCK_NB)){
+                $list = model("OrderRemainPre")->where("status", 0)->where("create_time", "lt", time() - 301)->select();
+                foreach ($list as $value) {
+                    $weixin = new WeiXinPay();
+                    $order_no = $value["order_no"];
+                    $res = $weixin->orderQuery($order_no);
+                    if ($res === true) {
+                        //订单已支付或在支付过程中,库存锁定
 
-                } else if ($res === false) {
-                    //订单已超时或已取消支付或未发起支付
-                    //订单做关闭处理
-                    $weixin->closeOrder($order_no);
-                    $value->save(["status" => 2]);
-                    $pro_list = json_decode($value["product_info"], true);
-                    foreach ($pro_list as $item) {
-                        model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
-                        if(isset($item["is_group"]) && $item["is_group"] == true){
-                            model("GroupProduct")->where("id", $item["product_id"])->setInc("group_limit", $item["num"]);
+                    } else if ($res === false) {
+                        //订单已超时或已取消支付或未发起支付
+                        //订单做关闭处理
+                        $weixin->closeOrder($order_no);
+                        $value->save(["status" => 2]);
+                        $pro_list = json_decode($value["product_info"], true);
+                        foreach ($pro_list as $item) {
+                            model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+                            if(isset($item["is_group"]) && $item["is_group"] == true){
+                                model("GroupProduct")->where("id", $item["product_id"])->setInc("group_limit", $item["num"]);
+                            }
                         }
                     }
-                } else {
-                    exit();
                 }
+                flock($lock, LOCK_UN);
+                fclose($lock);
             }
         } catch (\Exception $e) {
-            exit();
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            Log::error("库存释放异常:".$e->getMessage());
         }
         exit("ok");
     }
@@ -384,5 +390,97 @@ class Pub extends Controller
         exit();
     }
 
+    /**
+     * 退款成功回调
+     */
+    public function orderRefund()
+    {
+        $xml = file_get_contents("php://input");
+        $res_data = json_decode(json_encode(simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA)), true);
+        if($res_data['return_code'] == "SUCCESS"){
+            $req_info = $res_data["req_info"];
+            //解密加密信息获取退款通知详情
+            $key_str = md5(config("weixin.api_key"));
+            $refund_data = openssl_decrypt(base64_decode($req_info, true), "AES-256-ECB", $key_str, OPENSSL_RAW_DATA);
+            $refund_info = json_decode(json_encode(simplexml_load_string($refund_data, 'SimpleXMLElement', LIBXML_NOCDATA)), true);
+            $refund_no = $refund_info["out_refund_no"];
+            $refund_money = $refund_info["refund_fee"];
+            $refund = model("OrderRefund")->where("refund_no", $refund_no)->find();
+            if($refund["status"] != 0){
+                Log::error("退款已处理");
+            }else{
+                if($refund_money != $refund["num"]*$refund["group_price"]){
+                    Log::error("微信退款异常");
+                }else{
+                    //军团退货商品处理
+                    $header_product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
+                    //团购
+                    $group = model("Group")->where("id", $refund["group_id"])->find();
+                    $group_product = model("GroupProduct")->where("id", $refund["product_id"])->find();
+                    //订单商品详情
+                    $product = model("OrderDet")->where("product_id", $refund["product_id"])->where("order_no", $refund["order_no"])->find();
 
+                    //军团商品处理
+                    if ($header_product["remain"] == -1) {
+                        $header_product->save([
+                            "refund_num" => $header_product["refund_num"] + $refund["num"],
+                            "sell_num" => $header_product["sell_num"] - $refund["num"]
+                        ]);
+                    } else {
+                        $header_product->save([
+                            "refund_num" => $header_product["refund_num"] + $refund["num"],
+                            "remain" => $header_product["remain"] + $refund["num"],
+                            "sell_num" => $header_product["sell_num"] - $refund["num"]
+                        ]);
+                    }
+                    //团购商品处理
+                    $group_product->save([
+                        "refund_num" => $group_product["refund_num"] + $refund["num"],
+                        "sell_num" => $group_product["sell_num"] - $refund["num"]
+                    ]);
+                    //订单处理
+                    $order = model("Order")->where("order_no", $refund["order_no"])->find();
+                    $order->save(["refund_money" => $order["refund_money"] + $refund_money]);
+                    $product->save(["back_num" => $refund["num"], "status" => 2]);
+
+                    //佣金
+                    $commission = $group_product["commission"] * ($refund["num"] * $refund["group_price"]) / 100;
+                    //城主
+                    $money = $refund["num"] * $refund["group_price"] - $commission;
+
+                    $header_money = model("HeaderMoneyLog");
+                    $leader_money = model("LeaderMoneyLog");
+                    //军团是否已结束
+                    if ($group["status"] == 2) {
+                        $header_money->save([
+                            "header_id" => $refund["header_id"],
+                            "type" => 2,
+                            "money" => -$money,
+                            "order_no" => $refund["id"]
+                        ]);
+
+                        $leader_money->save([
+                            "leader_id" => $refund["leader_id"],
+                            "type" => 2,
+                            "money" => -$commission,
+                            "order_no" => $refund["id"]
+                        ]);
+                        if ($order["commission_status"] == 1) {
+                            //佣金已经处理过，退款同时减佣金及城主收入
+                            model("Header")->where("id", $refund["header_id"])->setDec("amount_able", $money);
+                            model("User")->where("id", $refund["leader_id"])->setDec("amount_able", $commission);
+                        } else {
+                            model("Header")->where("id", $refund["header_id"])->setDec("amount_lock", $money);
+                            model("User")->where("id", $refund["leader_id"])->setDec("amount_lock", $commission);
+                        }
+                    }
+                    $refund->save("status", 1);
+                }
+            }
+        }else{
+            Log::error("微信退款失败:".$res_data["return_msg"]);
+        }
+        echo '<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>';
+        exit;
+    }
 }

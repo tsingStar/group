@@ -56,7 +56,7 @@ class Interval extends Controller
                 if ($res) {
 //                    model("Group")->isUpdate(true)->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
                     Group::update(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
-                    //军团销售汇总
+                    /*//军团销售汇总
                     $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
                     //团购销售汇总
                     $group_list = model("GroupProduct")->where("header_group_id", $group_id)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id, group_id")->select();
@@ -75,7 +75,7 @@ class Interval extends Controller
                             "money" => $item["sum_money"],
                             "order_no" => $item["group_id"]
                         ])->isUpdate(false)->save();
-                    }
+                    }*/
                 } else {
                     throw new Exception("团购状态处理失败");
                 }

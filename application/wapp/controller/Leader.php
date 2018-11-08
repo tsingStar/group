@@ -922,7 +922,7 @@ class Leader extends Controller
             ];
             $model->where($where);
         }
-        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace")->order("a.create_time desc")->limit($page * $page_num, $page_num)->select();
+        $list = $model->field("a.order_no, a.user_name, b.avatar, a.user_telephone, a.pick_status, a.order_money, a.refund_money, a.pick_address, a.is_replace, a.num")->order("a.create_time desc")->limit($page * $page_num, $page_num)->select();
         foreach ($list as $item) {
             $order_no = $item['order_no'];
             $item['product_list'] = model('OrderDet')->getOrderPro($order_no);
@@ -996,7 +996,7 @@ class Leader extends Controller
         $product_id = input("product_id");
         $leader_id = input("leader_id");
         if (file_exists(__UPLOAD__ . "/erweima/" . $group_id . "-" . $product_id . ".png")) {
-            exit_json(1, "请求成功", ["imgUrl" => "http://" . __URI__ . "/upload" . "/erweima/" . $group_id . "-" . $product_id . ".png"]);
+            exit_json(1, "请求成功", ["imgUrl" => "https://" . __URI__ . "/upload" . "/erweima/" . $group_id . "-" . $product_id . ".png"]);
         }
         $group = model("Group")->where("id", $group_id)->find();
         $product = model("GroupProduct")->where("id", $product_id)->find();
