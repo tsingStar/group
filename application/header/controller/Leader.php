@@ -10,6 +10,8 @@ namespace app\header\controller;
 
 
 
+use think\Cache;
+
 class Leader extends ShopBase
 {
     protected function _initialize()
@@ -80,7 +82,10 @@ class Leader extends ShopBase
                 exit_json(-1, '权限错误');
             }
             $data->save(['status' => 1]);
-            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => HEADER_ID, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name" => $data["name"]]);
+            $user = model('User')->where('id', $data['user_id'])->find();
+            $user->save(['role_status' => 2, "header_id" => HEADER_ID, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name" => $data["name"]]);
+            Cache::rm($user["id"].":user");
+            Cache::rm($user["open_id"].":user");
             exit_json();
         } else {
             exit_json(-1, '申请记录不存在或已处理');
@@ -113,6 +118,7 @@ class Leader extends ShopBase
     /**
      * 取消团长身份
      */
+
     public function cancel()
     {
         $id = input("id");

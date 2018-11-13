@@ -9,6 +9,7 @@
 namespace app\common\model;
 
 
+use think\Cache;
 use think\Model;
 
 class HeaderGroupProductSwiper extends Model
@@ -18,9 +19,24 @@ class HeaderGroupProductSwiper extends Model
         parent::initialize();
     }
 
+    /**
+     * @param int $pid 军团id
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function getSwiper($pid)
     {
-        return $this->where("header_group_product_id", $pid)->field('swiper_type types, swiper_url urlImg')->order("create_time")->select();
+        if (!Cache::has($pid . ":swiper")) {
+            $data = $this->where("header_group_product_id", $pid)->field('swiper_type types, swiper_url urlImg')->order("create_time")->select();
+            $list = [];
+            foreach ($data as $item){
+                $list[] = $item->getData();
+            }
+            Cache::set($pid . ":swiper", $list);
+        }
+        return Cache::get($pid . ":swiper");
     }
 
 }

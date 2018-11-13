@@ -12,6 +12,7 @@ namespace app\wapp\controller;
 
 use app\common\model\ApplyHeaderRecord;
 use app\common\model\WeiXinPay;
+use think\Cache;
 use think\Controller;
 use think\Log;
 
@@ -121,15 +122,13 @@ class Pub extends Controller
         }
         $session_key = $res['session_key'];
         $open_id = $res['openid'];
-        Log::error($open_id);
-
-
-        $os = db('os')->where('open_id', $open_id)->find();
-        if ($os) {
-            db('os')->where('open_id', $open_id)->update(['session_key' => $session_key]);
-        } else {
-            db('os')->insert(['open_id' => $open_id, 'session_key' => $session_key]);
-        }
+        cache($open_id, $session_key);
+//        $os = db('os')->where('open_id', $open_id)->find();
+//        if ($os) {
+//            db('os')->where('open_id', $open_id)->update(['session_key' => $session_key]);
+//        } else {
+//            db('os')->insert(['open_id' => $open_id, 'session_key' => $session_key]);
+//        }
         exit_json(1, '请求成功', [
             'open_id' => $open_id,
         ]);
@@ -156,24 +155,25 @@ class Pub extends Controller
             'province' => $province,
             'country' => $country
         ];
-        Log::error($data);
         if (!$open_id) {
             exit_json(-1, '登陆失败');
         }
-        $user = model('User')->where('open_id', $open_id)->find();
-        if ($user) {
-            $data['update_time'] = time();
-            $user->save($data);
-            $res = true;
-            $user_id = $user['id'];
-        } else {
-            $res = model('User')->save($data);
-            $user_id = model('User')->getLastInsID();
-        }
-        if ($res) {
-            exit_json(1, '登陆成功', model('User')->find($user_id));
-        } else {
-            exit_json(-1, '登陆失败');
+        if(Cache::has($open_id.":user")){
+            $res = Cache::get($open_id.":user");
+            exit_json(1, "登录成功", $res);
+        }else{
+            $user = model('User')->field("id, open_id, user_name, avatar, name, role_status, header_id")->where('open_id', $open_id)->find();
+            if (!$user) {
+                $res = model('User')->insertGetId($data);
+                if($res){
+                    exit_json(1, "登录成功", array_merge($data, ["id"=>$res, "role_status"=>0, "header_id"=>0]));
+                }else{
+                    exit_json(-1, "登录失败");
+                }
+            }else{
+                Cache::set($open_id.":user", $user->getData());
+                exit_json(1, "登录成功",$user->getData());
+            }
         }
     }
 
@@ -331,9 +331,10 @@ class Pub extends Controller
                         $pro_list = json_decode($value["product_info"], true);
                         foreach ($pro_list as $item) {
                             model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
-                            if(isset($item["is_group"]) && $item["is_group"] == true){
-                                model("GroupProduct")->where("id", $item["product_id"])->setInc("group_limit", $item["num"]);
-                            }
+                            Cache::inc($item["header_product_id"].":stock", $item["num"]);
+//                            if(isset($item["is_group"]) && $item["is_group"] == true){
+//                                model("GroupProduct")->where("id", $item["product_id"])->setInc("group_limit", $item["num"]);
+//                            }
                         }
                     }
                 }
@@ -362,13 +363,14 @@ class Pub extends Controller
         if (!$group) {
             exit();
         }
-        $session_key = db("os")->where("open_id", $open_id)->value("session_key");
+//        $session_key = db("os")->where("open_id", $open_id)->value("session_key");
+        $session_key = \cache($open_id);
         $encry = new \wxBizDataCrypt(config("weixin.app_id"), $session_key);
         $vi = input("vi");
         $encry_data = input("encry_data");
         $encry->decryptData($encry_data, $vi, $data);
         $data = json_decode($data, true);
-        $user = model("User")->where("open_id", $open_id)->find();
+        $user = model("User")->getUserInfo(0, $open_id);
         if (!$user) {
             exit();
         }

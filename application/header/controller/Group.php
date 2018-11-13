@@ -12,6 +12,7 @@ namespace app\header\controller;
 use app\common\model\HeaderGroup;
 use app\common\model\HeaderGroupProduct;
 use app\common\model\HeaderGroupProductSwiper;
+use think\Cache;
 use think\Exception;
 use think\Log;
 
@@ -80,11 +81,18 @@ class Group extends ShopBase
         if ($group["status"] != 0) {
             exit_json(-1, "团购已开启");
         } else {
+            if($group["comp_status"]){
+                exit_json(-1, "军团已结算，不可二次开启");
+            }
             $group->status = 1;
             $group->open_time = date("Y-m-d");
             $res = $group->save();
-            model("Group")->save(["status"=>1], ["header_group_id"=>$group_id]);
             if ($res) {
+                $g_list = model("Group")->where(["header_group_id" => $group_id])->select();
+                foreach ($g_list as $item){
+                    $item->save(["status" => 1]);
+                    Cache::rm($item["id"].":groupBaseInfo");
+                }
                 exit_json();
             } else {
                 exit_json(-1, "开启失败，刷新后重试");
@@ -105,7 +113,12 @@ class Group extends ShopBase
             model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
             $res = $group->save(["status" => 2]);
             if ($res) {
-                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
+//                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
+                $g_list = model("Group")->where(["header_group_id" => $group_id, "status" => ["neq", 2]])->select();
+                foreach ($g_list as $item){
+                    $item->save(["status" => 2, "close_time" => date("Y-m-d H:i")]);
+                    Cache::rm($item["id"].":groupBaseInfo");
+                }
                 exit_json();
             } else {
                 exit_json(-1, "操作失败");
@@ -162,6 +175,11 @@ class Group extends ShopBase
                 $res1 = model('HeaderGroup')->save($data);
                 $group_id = model('HeaderGroup')->getLastInsID();
             }
+
+            //编辑军团信息完成后，添加缓存信息
+            $data["id"] = $group_id;
+            Cache::set($group_id.":HeaderGroup", $data);
+
             if (!$res1) {
                 throw new Exception('创建团购失败');
             }
@@ -200,9 +218,14 @@ class Group extends ShopBase
                 } else {
                     $product_id = model('HeaderGroupProduct')->getLastInsID();
                 }
+                //更新每个商品库存
+                Cache::set($product_id.":stock", $product_data["remain"]);
+                Cache::set($product_id.":self_limit", $product_data["self_limit"]);
+                Cache::set($product_id.":group_limit", $product_data["group_limit"]);
 
                 //二次添加商品处理加入团购商品列表
-                $group_list = db()->query("select * from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
+//                $group_list = db()->query("select * from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
+                $group_list = model("Group")->field("leader_id, id group_id")->where("header_group_id", $group_id)->select();
                 foreach ($group_list as $val) {
                     $g_product = model("GroupProduct")->where([
                         'header_group_id' => $group_id,
@@ -229,20 +252,32 @@ class Group extends ShopBase
                         ];
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();
                     }
+                    //删除团购商品列表
+                    if(Cache::has($val["group_id"].":product_list")){
+                        Cache::rm($val["group_id"].":product_list");
+                    }
                 }
                 //二次编辑添加商品处理结束
 
                 $item['img_list'] = model("ProductSwiper")->where("product_id", $base_id)->select();
                 $product_swiper = $item['img_list'];
                 $swiper = [];
+                $swiper_data = [];
                 foreach ($product_swiper as $value) {
                     $swiper[] = [
                         'header_group_product_id' => $product_id,
                         'swiper_type' => $value['type'],
                         'swiper_url' => $value['url']
                     ];
+                    $swiper_data[] = [
+                        'header_group_product_id' => $product_id,
+                        'types' => $value['type'],
+                        'urlImg' => $value['url']
+                    ];
                 }
                 $res3 = model('HeaderGroupProductSwiper')->saveAll($swiper);
+                //更新商品图片信息
+                Cache::set($product_id.":swiper", $swiper_data);
                 if (!$res3) {
                     throw new Exception('商品轮播保存失败');
                 }

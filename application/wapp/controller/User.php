@@ -13,6 +13,7 @@ namespace app\wapp\controller;
 use app\common\model\ApplyLeaderRecord;
 use app\common\model\Group;
 use app\common\model\WeiXinPay;
+use think\Cache;
 use think\Controller;
 use think\Log;
 
@@ -28,7 +29,7 @@ class User extends Controller
             if (!$user_id) {
                 exit_json(-1, '用户不存在，请重新登陆');
             } else {
-                $this->user = \app\common\model\User::get($user_id);
+                $this->user = model("User")->getUserInfo($user_id);
                 if (!$this->user) {
                     exit_json(-1, '用户不存在，请重新登陆');
                 }
@@ -82,7 +83,8 @@ class User extends Controller
     public function getHeaderAddress()
     {
         $header_id = input('header_id');
-        $header = \app\common\model\Header::get($header_id);
+//        $header = \app\common\model\Header::get($header_id);
+        $header = model("Header")->getHeaderAddress($header_id);
         $data = [
             'header_id' => $header['id'],
             'nick_name' => $header['nick_name'],
@@ -110,47 +112,90 @@ class User extends Controller
     public function getGroupDetail()
     {
         $group_id = input('group_id');
-        $group = model('Group')->where("id", $group_id)->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status, scan_num')->find();
+        //获取团购基本信息
+//        $group = model('Group')->where("id", $group_id)->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status, scan_num')->find();
+        $group = model("Group")->getGroupBaseInfo($group_id);
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
-        $lr = db("LeaderRecord")->where("user_id", $this->user["id"])->find();
-        if ($lr) {
-            db("LeaderRecord")->where(["user_id" => $this->user["id"]])->update(["leader_id" => $group["leader_id"]]);
-        } else {
-            db("LeaderRecord")->insert(["user_id" => $this->user["id"], "leader_id" => $group["leader_id"]]);
+
+        //团员上次访问团长记录
+//        $lr = db("LeaderRecord")->where("user_id", $this->user["id"])->find();
+//        if ($lr) {
+//            db("LeaderRecord")->where(["user_id" => $this->user["id"]])->update(["leader_id" => $group["leader_id"]]);
+//        } else {
+//            db("LeaderRecord")->insert(["user_id" => $this->user["id"], "leader_id" => $group["leader_id"]]);
+//        }
+        Cache::set($this->user["id"] . ":leaderRecord", $group["leader_id"]);
+        //保存访问记录
+        curl_request(__URL__ . "/wapp/Async/saveLeaderRecord", ["user_id" => $this->user['id'], "leader_id" => $group["leader_id"]], 0.005);
+//        file_get_contents(__URL__."/wapp/Async/saveLeaderRecord?user_id=".$this->user['id']."&leader_id=".$group["leader_id"]);
+
+
+        //统计访问量---数据库统计
+//        $uv = db("Uv")->where("user_id", $this->user["id"])->where("group_id", $group_id)->find();
+//        if (!$uv) {
+//            db("Uv")->insert(["user_id" => $this->user["id"], "group_id" => $group_id]);
+//            $group->save(["scan_num" => $group["scan_num"] + 1]);
+//        }
+        $uv = Cache::get($group_id . ":Uv", []);
+        if (!in_array($this->user["id"], $uv)) {
+            $uv[] = $this->user["id"];
+            Cache::set($group_id . ":Uv", [$this->user["id"]]);
+            //保存访问量
+            curl_request(__URL__ . "/wapp/Async/saveScanNum", ["group_id" => $group_id], 0.005);
         }
-        $uv = db("Uv")->where("user_id", $this->user["id"])->where("group_id", $group_id)->find();
-        if (!$uv) {
-            db("Uv")->insert(["user_id" => $this->user["id"], "group_id" => $group_id]);
-            $group->save(["scan_num" => $group["scan_num"] + 1]);
-        }
-        $product_list = model('GroupProduct')->alias("a")->join("HeaderGroupProduct b", "a.header_product_id=b.id")->where('a.group_id', $group_id)->field('a.id, a.leader_id, a.header_group_id, a.group_id, a.header_product_id, a.product_name, a.product_desc, a.commission, a.market_price, a.group_price, a.tag_name, b.remain')->order('a.ord')->select();
+        $group["scan_num"] = count(Cache::get($group_id . ":Uv"));
+
+        //团购商品列表
+//        $product_list = model('GroupProduct')->alias("a")->join("HeaderGroupProduct b", "a.header_product_id=b.id")->where('a.group_id', $group_id)->field('a.id, a.leader_id, a.header_group_id, a.group_id, a.header_product_id, a.product_name, a.product_desc, a.commission, a.market_price, a.group_price, a.tag_name, b.remain')->order('a.ord')->select()
+//        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price, tag_name')->order('ord')->select();
+        //缓存获取商品列表
+        $product_list = model("GroupProduct")->getProductList($group_id);
         foreach ($product_list as $value) {
-//            $value['product_img'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $value['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
             $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
+            //添加商品库存
+//            $value["remain"] = Cache::get($value["header_product_id"].":stock");
+            $value["remain"] = model("HeaderGroupProduct")->getRemain($value["header_product_id"]);
+
         }
 
         //获取显示状态
-        $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
-        if (!$config) {
-            db("HeaderConfig")->insert(["header_id" => $group["header_id"]]);
-            $show = 1;
-        } else {
-            $show = $config["sale_detail_show"];
-        }
-        $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
-        $order_num = model("Order")->where("group_id", $group_id)->count();
-        $group['sale_detail'] = [
-            "is_show" => $show,
-            "detail" => [
-                "scan_number" => $group["scan_num"],
-                "order_number" => $order_num,
-                "order_money" => $order_money
-            ]
-        ];
+//        $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
+//        if (!$config) {
+//            db("HeaderConfig")->insert(["header_id" => $group["header_id"]]);
+//            $show = 1;
+//        } else {
+//            $show = $config["sale_detail_show"];
+//        }
+//        if(Cache::has($group["header_id"].":sale_detail_show")){
+//            $show = Cache::get($group["header_id"].":sale_detail_show");
+//        }else{
+//            $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
+//            if (!$config) {
+//                db("HeaderConfig")->insert(["header_id" => $group["header_id"]]);
+//                $show = 1;
+//            } else {
+//                $show = $config["sale_detail_show"];
+//            }
+//            Cache::set($group["header_id"].":sale_detail_show", $show);
+//        }
+        //是否显示团购基本状况
+//        if($show){
+//            $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
+//            $order_num = model("Order")->where("group_id", $group_id)->count();
+//            $group['sale_detail'] = [
+//                "is_show" => $show,
+//                "detail" => [
+//                    "scan_number" => $group["scan_num"],
+//                    "order_number" => $order_num,
+//                    "order_money" => $order_money
+//                ]
+//            ];
+//        }
         $group['product_list'] = $product_list;
-        $leader = model("User")->where("id", $group["leader_id"])->find();
+//        $leader = model("User")->where("id", $group["leader_id"])->find();
+        $leader = model("User")->getUserInfo($group["leader_id"]);
         $group["user_name"] = $leader["user_name"];
         $group["avatar"] = $leader["avatar"];
         exit_json(1, '请求成功', $group);
@@ -172,7 +217,7 @@ class User extends Controller
     public function getGroupRecord()
     {
         $group_id = input('group_id');
-        $group = model("Group")->where("id", $group_id)->find();
+        $group = model("Group")->getGroupBaseInfo($group_id);
         if (!$group) {
             exit_json(-1, "团购不存在");
         }
@@ -188,11 +233,16 @@ class User extends Controller
 //                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
                 $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num sum_num")->select();
             }
+
         } else {
-            $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
+//            $record_list = model('Order')->alias('a')->join('User b', 'a.user_id=b.id')->where('a.group_id', $group_id)->field('a.id, a.create_time, b.avatar, b.user_name, a.order_no, a.is_replace, a.num')->limit($page * $page_num, $page_num)->order("a.create_time desc")->select();
+            $record_list = model('Order')->where('a.group_id', $group_id)->field('id, create_time, order_no, is_replace, num, user_id')->limit($page * $page_num, $page_num)->order("create_time desc")->select();
             $order_sum = model("Order")->where("group_id", $group_id)->count();
             foreach ($record_list as $l) {
 //                $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num-back_num) num');
+                $user = model("User")->getUserInfo($l["user_id"]);
+                $l["user_name"] = $user["user_name"];
+                $l["avatar"] = $user["avatar"];
                 $l["product_num"] = model('OrderDet')->where('order_no', $l['order_no'])->value('sum(num) num');
                 $l["product_list"] = model("OrderDet")->where("order_no", $l["order_no"])->field("product_name, num sum_num")->select();
             }
@@ -212,37 +262,50 @@ class User extends Controller
     {
         $product_id = input('product_id');
         $group_id = input('group_id');
-        $group = model("Group")->where("id", $group_id)->find();
+        $group = model("Group")->getGroupBaseInfo($group_id);
         if ($group["status"] != 1) {
             exit_json(-1, "团购未开启或已结束");
         }
         $num = input('num');
         $lock1 = fopen(__PUBLIC__ . "/lock1.txt", "w");
-        if(flock($lock1, LOCK_EX)){
+        if (flock($lock1, LOCK_EX)) {
 
-            $product = model('GroupProduct')->where('id', $product_id)->find();
-            $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
+//            $product = model('GroupProduct')->where('id', $product_id)->find();
+            if(Cache::has($product_id.":groupProduct")){
+                $product = Cache::get($product_id.":groupProduct");
+            }else{
+                $product = model('GroupProduct')->where('id', $product_id)->find();
+                Cache::set($product_id.":groupProduct", $product);
+            }
+//            $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
+            $header_product_id = $product['header_product_id'];
+            $remain = model("HeaderGroupProduct")->getRemain($header_product_id);
+            $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
+            $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
+
+
+            //TODO  商品购买数量待优化
             $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
             $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
 
             flock($lock1, LOCK_UN);
             fclose($lock1);
             //军团库存数量
-            if ($header_product['remain'] != -1 && $header_product['remain'] < $num) {
+            if ($remain != -1 && $remain < $num) {
                 exit_json(-1, '抱歉，商品已被抢光');
             }
 
             //团员限购
-            if ($product['self_limit'] > 0 && $product['self_limit'] < $self_num + $num) {
-                exit_json(-1, '商品个人限购' . $product['self_limit'] . '件');
+            if ($self_limit > 0 && $self_limit < $self_num + $num) {
+                exit_json(-1, '商品个人限购' . $self_limit . '件');
             }
 
             //团限购
 //            if ($product['group_limit'] > 0 && $group_num + $num > $product['group_limit']) {
 //                exit_json(-1, '该商品团限购' . $product['group_limit'] . '件，还剩' . ($num - 1));
 //            }
-            if ($header_product['group_limit'] > 0 && $num > $product['group_limit']) {
-                exit_json(-1, '该商品团限购' . $header_product['group_limit'] . '件，还剩' . ($num - 1));
+            if ($group_limit > 0 && $group_num + $num > $group_limit) {
+                exit_json(-1, '该商品团限购' . $group_limit . '件，还剩' . ($num - 1));
             }
         }
 
@@ -256,7 +319,6 @@ class User extends Controller
     {
 
         $product_list = input("product_list/a");
-
 
         $lock = fopen(__PUBLIC__ . "/lock.txt", "w");
         if (flock($lock, LOCK_EX)) {
@@ -278,25 +340,32 @@ class User extends Controller
             $pro_name = "";
             $pro_arr = [];
             foreach ($product_list as $item) {
-                $pro = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
+
+                $remain = model("HeaderGroupProduct")->getRemain($item["header_product_id"]);
+                $group_limit = model("HeaderGroupProduct")->getGroupLimit($item["header_product_id"]);
+                $pro = [
+                    "remain"=>$remain,
+                    "group_limit"=>$group_limit
+                ];
+//                $pro = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
                 if ($pro["remain"] != -1) {
                     if ($pro["remain"] < $item["num"]) {
                         $bol = true;
                         $pro_name .= $item["product_name"] . "、";
                     } else {
-                        if($pro["group_limit"]>0){
+                        if ($pro["group_limit"] > 0) {
                             $pro_arr[] = [
                                 "header_product_id" => $item["header_product_id"],
                                 "num" => $item["num"],
-                                "product_id"=>$item["id"],
-                                "is_group"=>true
+                                "product_id" => $item["id"],
+                                "is_group" => true
                             ];
-                        }else{
+                        } else {
                             $pro_arr[] = [
                                 "header_product_id" => $item["header_product_id"],
                                 "num" => $item["num"],
-                                "product_id"=>$item["id"],
-                                "is_group"=>false
+                                "product_id" => $item["id"],
+                                "is_group" => false
                             ];
                         }
                     }
@@ -310,10 +379,12 @@ class User extends Controller
             }
             $order_no = getOrderNo();
             foreach ($pro_arr as $val) {
-                model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
-                if($val["is_group"]){
-                    model("GroupProduct")->where("id", $val["product_id"])->setDec("group_limit", $val["num"]);
-                }
+                Cache::dec($val["header_product_id"].":stock", $val["num"]);
+                curl_request(__URL__."/wapp/Async/decRemain", ["header_product_id"=>$val["header_product_id"], "num"=>$val["num"]], 0.1);
+//                model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
+//                if ($val["is_group"]) {
+//                    model("GroupProduct")->where("id", $val["product_id"])->setDec("group_limit", $val["num"]);
+//                }
             }
 
             $res = model("OrderRemainPre")->insert([

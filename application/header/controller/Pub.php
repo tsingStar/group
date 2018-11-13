@@ -79,19 +79,28 @@ class Pub extends Controller
      */
     public function uploadFile()
     {
-        $img_url = uploadFile("file");
-        $file_info = pathinfo($img_url);
-        $extension = $file_info["extension"];
-        $img_arr = ["jpg", "jpeg", "gif", "png", "bmp"];
-        $video_arr = ["mp4", "avi", "rmvb"];
-        if(in_array($extension, $img_arr)){
-            $type = 1;
-        }else if(in_array($extension, $video_arr)){
-            $type = 2;
+
+//        $img_url = uploadFile("file");
+        $file = request()->file("file");
+        $res = \Qiniu::UploadFile($file);
+        if($res["err"] == 0){
+            $img_url = $res["data"];
+            $file_info = pathinfo($img_url);
+            $extension = $file_info["extension"];
+            $img_arr = ["jpg", "jpeg", "gif", "png", "bmp"];
+            $video_arr = ["mp4", "avi", "rmvb"];
+            if(in_array($extension, $img_arr)){
+                $type = 1;
+            }else if(in_array($extension, $video_arr)){
+                $type = 2;
+            }else{
+                $type = 3;
+            }
+            exit_json(1, "上传成功", ["type"=>$type, "url" => $img_url]);
         }else{
-            $type = 3;
+            exit_json(-1, $res["msg"]);
         }
-        exit_json(1, "上传成功", ["type"=>$type, "url" => $img_url]);
+
     }
 
 

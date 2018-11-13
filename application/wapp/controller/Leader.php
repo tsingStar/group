@@ -13,6 +13,7 @@ namespace app\wapp\controller;
 use app\common\model\Group;
 use app\common\model\SendSms;
 use app\common\model\WeiXinPay;
+use think\Cache;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -238,6 +239,9 @@ class Leader extends Controller
                 if ($group_product) {
                     $pro_data['update_time'] = time();
                     $res2 = $group_product->save($pro_data, $group_product['id']);
+                    //清楚商品信息缓存
+                    Cache::rm($group_product["id"].":groupProduct");
+
 //                    $product_id = $item['id'];
 //                    model('GroupProductSwiper')->where('group_product_id', $product_id)->delete();
                 } else {

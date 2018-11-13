@@ -9,6 +9,7 @@
 namespace app\wapp\controller;
 
 
+use think\Cache;
 use think\Controller;
 use think\Log;
 
@@ -21,18 +22,81 @@ class Temp extends Controller
 
     }
 
+    /**
+     * 测试七牛上传
+     *
+     */
+    public function testUpload()
+    {
+        set_time_limit(0);
+        echo time().get_millisecond();
+        echo ",";
+        $list = model("ProductSwiper")->select();
+        $num = 0;
+        $bad = 0;
+        foreach ($list as $item){
+            $res = \Qiniu::Upload($item["url"]);
+            if($res["err"] == 1){
+                $bad++;
+            }else{
+                $num++;
+                $item->save(["url"=>$res['data']]);
+            }
+        }
+        echo $num.":".$bad;
+        echo ",";
+        echo time().get_millisecond();
+        exit;
+    }
+
+    public function asyncImg()
+    {
+        set_time_limit(0);
+        $list = model("ProductSwiper")->column("url");
+        foreach ($list as $item){
+            $file_name = basename($item);
+            $plist = model("HeaderGroupProductSwiper")->whereLike("swiper_url", "%$file_name")->select();
+            foreach ($plist as $p){
+                $p->save(["swiper_url"=>$item]);
+            }
+        }
+        exit("ok");
+        
+    }
+
+    /**
+     * 删除指定资源
+     */
+    public function delUpload()
+    {
+        $file_name = basename(input("key"));
+        $res = \Qiniu::delFile($file_name);
+        print_r($res);
+        exit;
+    }
 
     function test1()
     {
-        $group_id = input("group_id");
-        $product_id = input("product_id");
-        $leader_id = input("leader_id");
-        $group = model("Group")->where("id", $group_id)->find();
-        $product = model("GroupProduct")->where("id", $product_id)->find();
-        $product["image"] = model("HeaderGroupProductSwiper")->where("header_group_product_id", $product["header_product_id"])->order("swiper_type")->value("swiper_url");
-        $leader = model("User")->where("id", $leader_id)->field("user_name name, avatar header_image")->find();
-        $image_url = \ImageDraw::drawImage($product, $leader, $group);
-        exit_json(1, "请求成功", ["imgUrl"=>$image_url]);
+        if(!session("order_token")){
+            session("order_token", time());
+        }else{
+            if(time() - session("order_token")<30){
+                exit_json(-1, "订单处理中。。。");
+            }else{
+                session("order_token", time());
+            }
+        }
+        exit_json();
+
+    }
+
+    public function f()
+    {
+        Cache::dec("num");
+        $pid = 606;
+        exit_json(1, "",Cache::get($pid.":swiper"));
+//        print_r(Cache::get("num"));
+        exit();
     }
 
     public function drawImage()

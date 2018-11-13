@@ -15,6 +15,7 @@ use app\common\model\HeaderGroup;
 use app\common\model\HeaderGroupProduct;
 use app\common\model\HeaderGroupProductSwiper;
 use app\common\model\WeiXinPay;
+use think\Cache;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -66,6 +67,11 @@ class Header extends Controller
                 $res1 = model('HeaderGroup')->save($data);
                 $group_id = model('HeaderGroup')->getLastInsID();
             }
+            //编辑军团信息完成后，添加缓存信息
+            $data["id"] = $group_id;
+            Cache::set($group_id.":HeaderGroup", $data);
+
+
             if (!$res1) {
                 throw new Exception('创建团购失败');
             }
@@ -124,9 +130,16 @@ class Header extends Controller
                     $product_id = model('HeaderGroupProduct')->getLastInsID();
                 }
 
+                //更新每个商品库存
+                Cache::set($product_id.":stock", $product_data["remain"]);
+                Cache::set($product_id.":self_limit", $product_data["self_limit"]);
+                Cache::set($product_id.":group_limit", $product_data["group_limit"]);
+
+
 
                 //二次添加商品处理加入团购商品列表
-                $group_list = db()->query("select * from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
+//                $group_list = db()->query("select leader_id, group_id from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
+                $group_list = model("Group")->field("leader_id, id group_id")->where("header_group_id", $group_id)->select();
                 foreach ($group_list as $key => $val) {
                     $g_product = model("GroupProduct")->where([
                         'header_group_id' => $group_id,
@@ -153,6 +166,9 @@ class Header extends Controller
                         ];
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();
                     }
+                    if(Cache::has($val["group_id"].":product_list")){
+                        Cache::rm($val["group_id"].":product_list");
+                    }
                 }
                 //二次编辑添加商品处理结束
 
@@ -167,6 +183,8 @@ class Header extends Controller
                     ];
                 }
                 $res3 = model('HeaderGroupProductSwiper')->saveAll($swiper);
+                //更新商品图片信息
+                Cache::set($product_id.":swiper", $product_swiper);
                 if (!$res3) {
                     throw new Exception('商品轮播保存失败');
                 }
@@ -348,11 +366,17 @@ class Header extends Controller
         if ($group['header_id'] != $this->header_id) {
             exit_json(-1, '登陆用户与团购创建用户不同');
         } else {
-            if ($group['status'] != 0) {
-                exit_json(-1, '当前团购不是未开启状态');
+            if($group["comp_status"]){
+                exit_json(-1, "军团已结算，不可二次开启");
             }
             $res = $group->save(['status' => 1, 'open_time' => date('Y-m-d H:i')]);
+//            model("Group")->save(["status"=>1], ["header_group_id"=>$group_id]);
             if ($res) {
+                $g_list = model("Group")->where(["header_group_id" => $group_id])->select();
+                foreach ($g_list as $item){
+                    $item->save(["status" => 1]);
+                    Cache::rm($item["id"].":groupBaseInfo");
+                }
                 exit_json();
             } else {
                 exit_json(-1, '开启失败');
@@ -435,7 +459,10 @@ class Header extends Controller
                 exit_json(-1, '权限错误');
             }
             $data->save(['status' => 1]);
-            model('User')->where('id', $data['user_id'])->find()->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name" => $data["name"]]);
+            $user = model('User')->where('id', $data['user_id'])->find();
+            $user->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name" => $data["name"]]);
+            Cache::rm($user["id"].":user");
+            Cache::rm($user["open_id"].":user");
             exit_json();
         } else {
             exit_json(-1, '申请记录不存在或已处理');
@@ -474,7 +501,13 @@ class Header extends Controller
             model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
             $res = $group->save(["status" => 2]);
             if ($res) {
-                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
+//                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
+                $g_list = model("Group")->where(["header_group_id" => $group_id, "status" => ["neq", 2]])->select();
+                foreach ($g_list as $item){
+                    $item->save(["status" => 2, "close_time" => date("Y-m-d H:i")]);
+                    Cache::rm($item["id"].":groupBaseInfo");
+                }
+
                 //军团销售汇总
 //                $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
 
@@ -688,14 +721,14 @@ class Header extends Controller
                     "refund_money" => $refund_money,
                     "shop_id" => $refund["leader_id"],
                     "refund_desc" => "团购退款".",".$refund['product_name']."-".$refund["reason"],
-                    "notify_url"=>"https://www.ybt9.com/wapp/Pub/orderRefund"
+//                    "notify_url"=>"https://www.ybt9.com/wapp/Pub/orderRefund"
                 ];
                 Log::error($refund_order);
                 $res = $weixin->refund($refund_order);
                 if ($res) {
-                    //回调处理退款成功
+                    //回调处理退款成功  需要完善
                     //军团退货商品处理
-                    /*$header_product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
+                    $header_product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
                     //团购
                     $group = model("Group")->where("id", $refund["group_id"])->find();
                     $group_product = model("GroupProduct")->where("id", $refund["product_id"])->find();
@@ -754,7 +787,7 @@ class Header extends Controller
                             model("Header")->where("id", $refund["header_id"])->setDec("amount_lock", $money);
                             model("User")->where("id", $refund["leader_id"])->setDec("amount_lock", $commission);
                         }
-                    }*/
+                    }
 
 
                     $refund->save(["status" => 1]);
@@ -768,6 +801,8 @@ class Header extends Controller
                 //拒绝原因
                 $refuse_reason = input("refuse_reason");
                 $res = $refund->save(["status" => 2, "refuse_reason" => $refuse_reason]);
+                $product = model("OrderDet")->where("product_id", $refund["product_id"])->where("order_no", $refund["order_no"])->find();
+                $product->save(["status" => 3]);
                 if ($res) {
                     exit_json(1, "处理成功");
                 } else {
