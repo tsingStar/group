@@ -168,7 +168,7 @@ return [
         // 日志保存目录
         'path' => LOG_PATH,
         // 日志记录级别
-        'level' => ['error'],
+        'level' => ['error', 'log'],
     ],
 
     // +----------------------------------------------------------------------
@@ -268,7 +268,8 @@ return [
         'app_secret' => 'bcce7059af8f6a7457c17eabaa89c94c'
     ],
     //支付回调地址
-    'notify_url' => __URL__ . '/admin/PayResult',
+    'notify_url' => 'https://yxt.ybt9.com/admin/PayResult',
+//    'notify_url' => __URL__ . '/admin/PayResult',
     'order_status' => [
         '0' => '待支付',
         '1' => '待收货',

@@ -118,7 +118,6 @@ class Leader extends ShopBase
     /**
      * 取消团长身份
      */
-
     public function cancel()
     {
         $id = input("id");

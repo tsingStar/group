@@ -22,6 +22,18 @@
             </div>
         </div>
         <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">军团类型：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <label>
+                    <input type="radio" name="is_sec" value="0" checked="checked" class="checkbox">普通团购
+                </label>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <label>
+                    <input type="radio" name="is_sec" value="1" class="checkbox" onclick="tipSec(this)">秒杀团
+                </label>
+            </div>
+        </div>
+        <div class="row cl">
             <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>团长取货方式：</label>
             <div class="formControls col-xs-8 col-sm-9">
                 <label>
@@ -238,6 +250,9 @@
 {include file="pub/footer"/}
 <script type="text/javascript">
 
+    function tipSec(){
+        layer.alert("当前团购已选为秒杀团");
+    }
     function saveGroup(status) {
         // status  0 保存团购  1 立即开团
         var data = {};
@@ -249,6 +264,8 @@
         }
         data["group_title"] = group_title;
         data["group_notice"] = $.trim($("input[name='group_notice']").val());
+        let is_sec = $("input[name='is_sec']:checked").val();
+        data["is_sec"] = is_sec;
         var dispatch_type = $("input[name='dispatch_type']:checked").val();
         if (dispatch_type == 1) {
             data["dispatch_type"] = 1;

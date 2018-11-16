@@ -105,8 +105,8 @@ class Index extends ShopBase
                     if(!$r){
                         $info = $item->move(__UPLOAD__."/spread/");
                         $saveName = $info->getSaveName();
-                        $path = "https://www.ybt9.com/upload/spread/" . $saveName;
-//                        $path = __URL__."/upload/spread/" . $saveName;
+//                        $path = "https://www.ybt9.com/upload/spread/" . $saveName;
+                        $path = __URL__."/upload/spread/" . $saveName;
                         $file_url[] = [
                             "image_url"=>$path,
                             "header_id"=>HEADER_ID,
@@ -125,8 +125,8 @@ class Index extends ShopBase
                 if(!$r){
                     $info = $file->move(__UPLOAD__."/spread/");
                     $saveName = $info->getSaveName();
-                    $path = "https://www.ybt9.com/upload/spread/" . $saveName;
-//                    $path = __URL__."/upload/spread/" . $saveName;
+//                    $path = "https://www.ybt9.com/upload/spread/" . $saveName;
+                    $path = __URL__."/upload/spread/" . $saveName;
                     $result_url = [
                         "image_url"=>$path,
                         "header_id"=>HEADER_ID,

@@ -32,7 +32,7 @@ class Group extends Model
     public function getGroupBaseInfo($group_id)
     {
         if(!Cache::has($group_id.":groupBaseInfo")){
-            $data = $this->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status')->where("id", $group_id)->find();
+            $data = $this->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status, is_sec')->where("id", $group_id)->find();
             if(!$data){
                 $this->error = "团购不存在";
                 return false;

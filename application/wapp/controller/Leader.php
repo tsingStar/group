@@ -42,7 +42,7 @@ class Leader extends Controller
     public function getGroupDetail()
     {
         $group_id = input('group_id');
-        $group = model('HeaderGroup')->field('id, header_id, group_title, group_notice, dispatch_type, dispatch_info, is_close, close_time, status')->where('id', $group_id)->find();
+        $group = model('HeaderGroup')->field('id, header_id, group_title, group_notice, dispatch_type, dispatch_info, is_close, close_time, status, is_sec')->where('id', $group_id)->find();
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
@@ -76,8 +76,8 @@ class Leader extends Controller
         $leader_group = model('Group')->where('header_group_id', $group_id)->where('leader_id', $this->leader_id)->find();
         if ($leader_group) {
             $p = model("GroupPush")->where("leader_id", $this->leader_id)->where("group_id", input("group_id"))->find();
-            if($p){
-                $p->save(["status"=>1]);
+            if ($p) {
+                $p->save(["status" => 1]);
             }
             exit_json(1, '团购已创建', ['group_id' => $leader_group['id'], 'status' => 1]);
         } else {
@@ -165,8 +165,8 @@ class Leader extends Controller
     public function saveGroup()
     {
         $p = model("GroupPush")->where("leader_id", $this->leader_id)->where("group_id", input("header_group_id"))->find();
-        if($p){
-            $p->save(["status"=>1]);
+        if ($p) {
+            $p->save(["status" => 1]);
         }
         $data = [
             //军团id
@@ -179,7 +179,8 @@ class Leader extends Controller
             'dispatch_type' => input('dispatch_type'),
             'dispatch_info' => input('dispatch_info'),
             'pick_type' => input('pick_type'),
-            'pick_address' => input('pick_address')
+            'pick_address' => input('pick_address'),
+            'is_sec' => input('is_sec')
         ];
         if (input('status') == 1) {
             $data['status'] = 1;
@@ -240,7 +241,7 @@ class Leader extends Controller
                     $pro_data['update_time'] = time();
                     $res2 = $group_product->save($pro_data, $group_product['id']);
                     //清楚商品信息缓存
-                    Cache::rm($group_product["id"].":groupProduct");
+                    Cache::rm($group_product["id"] . ":groupProduct");
 
 //                    $product_id = $item['id'];
 //                    model('GroupProductSwiper')->where('group_product_id', $product_id)->delete();
@@ -282,7 +283,7 @@ class Leader extends Controller
     public function editGroup()
     {
         $group_id = input('group_id');
-        $group = model('Group')->alias('a')->join('HeaderGroup b', 'a.header_group_id=b.id')->where('a.id', $group_id)->field('a.id group_id, a.header_group_id, a.header_id, a.leader_id, a.title, a.notice, a.pay_type, a.pick_type, a.pick_address, a.dispatch_type, a.dispatch_info, b.group_title header_group_title, b.group_notice header_group_notice,b.dispatch_info header_dispatch')->find();
+        $group = model('Group')->alias('a')->join('HeaderGroup b', 'a.header_group_id=b.id')->where('a.id', $group_id)->field('a.id group_id, a.header_group_id, a.header_id, a.leader_id, a.title, a.notice, a.pay_type, a.pick_type, a.pick_address, a.is_sec, a.dispatch_type, a.dispatch_info, b.group_title header_group_title, b.group_notice header_group_notice,b.dispatch_info header_dispatch')->find();
         if (!$group || $group['leader_id'] != $this->leader_id) {
             exit_json(-1, '团购信息不存在');
         }
@@ -414,7 +415,7 @@ class Leader extends Controller
     {
         $user = model("User")->where('id', $this->leader_id)->find();
         $data = [
-            'total_money' => round($user['amount_able'] + $user['amount_lock'],2),
+            'total_money' => round($user['amount_able'] + $user['amount_lock'], 2),
             'amount_able' => $user['amount_able']
         ];
         exit_json(1, '请求成功', $data);
@@ -479,7 +480,7 @@ class Leader extends Controller
             exit_json(-1, '订单已处理');
         }
         $res1 = $order->save(['pick_status' => 1]);
-        $res2 = model("OrderDet")->save(["status" => 3], ['status' => 0, 'order_no'=>$order_no]);
+        $res2 = model("OrderDet")->save(["status" => 3], ['status' => 0, 'order_no' => $order_no]);
         if ($res1) {
             exit_json();
         } else {
@@ -1021,15 +1022,15 @@ class Leader extends Controller
     {
         $leader_id = $this->leader_id;
         $res = model("GroupPush")->where("leader_id", $leader_id)->where("status", 0)->order("create_time desc")->find();
-        if($res){
+        if ($res) {
             exit_json(1, "", [
-                "group_id"=>$res["group_id"],
-                "header_id"=>$res["header_id"]
+                "group_id" => $res["group_id"],
+                "header_id" => $res["header_id"]
             ]);
-        }else{
+        } else {
             exit_json(-1, "暂无待编辑团购");
         }
-        
+
     }
 
     /**
@@ -1038,7 +1039,7 @@ class Leader extends Controller
     public function getReadyImage()
     {
         $image_list = model("PreImage")->where("header_id", $this->leader["header_id"])->column("image_url");
-        exit_json(1, "请求成功", ["image_list"=>$image_list]);
+        exit_json(1, "请求成功", ["image_list" => $image_list]);
     }
 
 

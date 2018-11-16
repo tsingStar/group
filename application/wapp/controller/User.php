@@ -152,11 +152,16 @@ class User extends Controller
 //        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price, tag_name')->order('ord')->select();
         //缓存获取商品列表
         $product_list = model("GroupProduct")->getProductList($group_id);
+        $redis = new \Redis2();
         foreach ($product_list as $value) {
             $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
             //添加商品库存
-//            $value["remain"] = Cache::get($value["header_product_id"].":stock");
-            $value["remain"] = model("HeaderGroupProduct")->getRemain($value["header_product_id"]);
+//            $value["remain"] = model("HeaderGroupProduct")->getRemain($value["header_product_id"]);
+            if($redis->get($value["header_product_id"].":remain") == 1){
+                $value["remain"] = $redis->llen($value["header_product_id"].":stock");
+            }else{
+                $value["remain"] = -1;
+            }
 
         }
 
@@ -267,46 +272,44 @@ class User extends Controller
             exit_json(-1, "团购未开启或已结束");
         }
         $num = input('num');
-        $lock1 = fopen(__PUBLIC__ . "/lock1.txt", "w");
-        if (flock($lock1, LOCK_EX)) {
+//        $lock1 = fopen(__PUBLIC__ . "/lock1.txt", "w");
+//        if (flock($lock1, LOCK_EX)) {
 
 //            $product = model('GroupProduct')->where('id', $product_id)->find();
-            if(Cache::has($product_id.":groupProduct")){
-                $product = Cache::get($product_id.":groupProduct");
-            }else{
-                $product = model('GroupProduct')->where('id', $product_id)->find();
-                Cache::set($product_id.":groupProduct", $product);
-            }
+        if (Cache::has($product_id . ":groupProduct")) {
+            $product = Cache::get($product_id . ":groupProduct");
+        } else {
+            $product = model('GroupProduct')->where('id', $product_id)->find();
+            Cache::set($product_id . ":groupProduct", $product);
+        }
 //            $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
-            $header_product_id = $product['header_product_id'];
-            $remain = model("HeaderGroupProduct")->getRemain($header_product_id);
-            $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
-            $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
+        $header_product_id = $product['header_product_id'];
+//            $remain = model("HeaderGroupProduct")->getRemain($header_product_id);
 
-
-            //TODO  商品购买数量待优化
-            $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
-            $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
-
-            flock($lock1, LOCK_UN);
-            fclose($lock1);
-            //军团库存数量
-            if ($remain != -1 && $remain < $num) {
-                exit_json(-1, '抱歉，商品已被抢光');
+        //校验商品库存数量是否正常
+        $redis = new \Redis2();
+        if ($redis->get($header_product_id . ":remain") == 1) {
+            //如若为库存商品
+            if ($num > $redis->llen($header_product_id . ":stock")) {
+                exit_json(-1, "商品剩余库存不足");
             }
+        }
 
-            //团员限购
-            if ($self_limit > 0 && $self_limit < $self_num + $num) {
-                exit_json(-1, '商品个人限购' . $self_limit . '件');
-            }
 
-            //团限购
-//            if ($product['group_limit'] > 0 && $group_num + $num > $product['group_limit']) {
-//                exit_json(-1, '该商品团限购' . $product['group_limit'] . '件，还剩' . ($num - 1));
-//            }
-            if ($group_limit > 0 && $group_num + $num > $group_limit) {
-                exit_json(-1, '该商品团限购' . $group_limit . '件，还剩' . ($num - 1));
-            }
+        $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
+        $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
+
+        //TODO  商品购买数量待优化
+        $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
+        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
+        //团员限购
+        if ($self_limit > 0 && $self_limit < $self_num + $num) {
+            exit_json(-1, '商品个人限购' . $self_limit . '件');
+        }
+
+        //团限购
+        if ($group_limit > 0 && $group_num + $num > $group_limit) {
+            exit_json(-1, '该商品团限购' . $group_limit . '件，还剩' . ($num - 1));
         }
 
         exit_json(1, '库存充足');
@@ -322,6 +325,7 @@ class User extends Controller
 
         $lock = fopen(__PUBLIC__ . "/lock.txt", "w");
         if (flock($lock, LOCK_EX)) {
+            $redis = new \Redis2();
             //TODO 待处理，上次锁定库存未释放,已处理，不确定是否有未处理bug
             $remain_order = model("OrderRemainPre")->where("user_id", $this->user['id'])->where("status", 0)->select();
             $weixin = new WeiXinPay();
@@ -332,28 +336,33 @@ class User extends Controller
                     $value->save(["status" => 2]);
                     $p_list = json_decode($value["product_info"], true);
                     foreach ($p_list as $item) {
-                        model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+                        //添加库存缓存
+                        for ($i = 0; $i < $item["num"]; $i++) {
+                            $redis->lpush($item["header_product_id"] . ":stock", 1);
+                        }
                     }
                 }
             }
             $bol = false;
             $pro_name = "";
             $pro_arr = [];
+            $temp = [];
             foreach ($product_list as $item) {
 
-                $remain = model("HeaderGroupProduct")->getRemain($item["header_product_id"]);
                 $group_limit = model("HeaderGroupProduct")->getGroupLimit($item["header_product_id"]);
-                $pro = [
-                    "remain"=>$remain,
-                    "group_limit"=>$group_limit
-                ];
-//                $pro = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
-                if ($pro["remain"] != -1) {
-                    if ($pro["remain"] < $item["num"]) {
+                $limit = $this->checkLimit($item["header_product_id"], $item["group_id"], $item["id"], $item["num"]);
+                if(!is_bool($limit)){
+                    $bol = true;
+                    $pro_name .= $limit;
+                    break;
+                }
+                if ($redis->get($item["header_product_id"] . ":remain") == 1) {
+                    if ($redis->llen($item["header_product_id"].":stock") < $item["num"]) {
                         $bol = true;
                         $pro_name .= $item["product_name"] . "、";
+                        break;
                     } else {
-                        if ($pro["group_limit"] > 0) {
+                        if ($group_limit > 0) {
                             $pro_arr[] = [
                                 "header_product_id" => $item["header_product_id"],
                                 "num" => $item["num"],
@@ -368,24 +377,29 @@ class User extends Controller
                                 "is_group" => false
                             ];
                         }
+                        for ($j=0;$j<$item["num"];$j++){
+                            $redis->lpop($item["header_product_id"].":stock");
+                        }
+                        $temp[] = [
+                            "header_product_id"=>$item["header_product_id"],
+                            "num"=>$item["num"]
+                        ];
                     }
                 }
 
             }
             if ($bol) {
+                //回归库存
+                foreach ($temp as $value){
+                    for($i=0;$i<$value["num"];$i++){
+                        $redis->lpush($value["header_product_id"].":stock", 1);
+                    }
+                }
                 flock($lock, LOCK_UN);
                 fclose($lock);
-                exit_json(-1, $pro_name . "抱歉，商品已被抢光");
+                exit_json(-1,  "抱歉，商品".$pro_name ."已被抢光");
             }
             $order_no = getOrderNo();
-            foreach ($pro_arr as $val) {
-                Cache::dec($val["header_product_id"].":stock", $val["num"]);
-                curl_request(__URL__."/wapp/Async/decRemain", ["header_product_id"=>$val["header_product_id"], "num"=>$val["num"]], 0.1);
-//                model("HeaderGroupProduct")->where("id", $val["header_product_id"])->setDec("remain", $val["num"]);
-//                if ($val["is_group"]) {
-//                    model("GroupProduct")->where("id", $val["product_id"])->setDec("group_limit", $val["num"]);
-//                }
-            }
 
             $res = model("OrderRemainPre")->insert([
                 "user_id" => $this->user["id"],
@@ -406,6 +420,25 @@ class User extends Controller
             fclose($lock);
             exit_json(-1, "系统异常");
         }
+    }
+
+    function checkLimit($header_product_id, $group_id, $product_id, $num){
+        $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
+        $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
+
+        //TODO  商品购买数量待优化
+        $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
+        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
+        //团员限购
+        if ($self_limit > 0 && $self_limit < $self_num + $num) {
+            return '商品个人限购' . $self_limit . '件';
+        }
+
+        //团限购
+        if ($group_limit > 0 && $group_num + $num > $group_limit) {
+            return '该商品团限购' . $group_limit . '件，还剩' . ($num - 1);
+        }
+        return true;
     }
 
     /**

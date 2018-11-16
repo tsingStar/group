@@ -329,9 +329,13 @@ class Pub extends Controller
                         $weixin->closeOrder($order_no);
                         $value->save(["status" => 2]);
                         $pro_list = json_decode($value["product_info"], true);
+                        $redis = new \Redis2();
                         foreach ($pro_list as $item) {
-                            model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
-                            Cache::inc($item["header_product_id"].":stock", $item["num"]);
+                            for ($i=0;$i<$item["num"];$i++){
+                                $redis->lpush($item["header_product_id"].":stock", 1);
+                            }
+//                            model("HeaderGroupProduct")->where("id", $item["header_product_id"])->setInc("remain", $item["num"]);
+//                            Cache::inc($item["header_product_id"].":stock", $item["num"]);
 //                            if(isset($item["is_group"]) && $item["is_group"] == true){
 //                                model("GroupProduct")->where("id", $item["product_id"])->setInc("group_limit", $item["num"]);
 //                            }

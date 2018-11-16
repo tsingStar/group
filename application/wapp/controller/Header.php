@@ -49,6 +49,7 @@ class Header extends Controller
             'dispatch_info' => input('dispatch_info'),
             'is_close' => input('is_close'),
             'status' => input('status'),
+            'is_sec' => input("is_sec")
         ];
         $close_time = input('close_time');
         $close_time = date("Y-m-d H:i", strtotime($close_time));
@@ -69,7 +70,7 @@ class Header extends Controller
             }
             //编辑军团信息完成后，添加缓存信息
             $data["id"] = $group_id;
-            Cache::set($group_id.":HeaderGroup", $data);
+            Cache::set($group_id . ":HeaderGroup", $data);
 
 
             if (!$res1) {
@@ -111,7 +112,7 @@ class Header extends Controller
                     'group_price' => $item['group_price'],
                     'group_limit' => $item['group_limit'],
                     'self_limit' => $item['self_limit'],
-                    'tag_name'=>isset($item['tag_name'])?$item['tag_name']:"",
+                    'tag_name' => isset($item['tag_name']) ? $item['tag_name'] : "",
                     'ord' => $key,
                     'product_desc' => $item['product_desc'],
                 ];
@@ -131,10 +132,25 @@ class Header extends Controller
                 }
 
                 //更新每个商品库存
-                Cache::set($product_id.":stock", $product_data["remain"]);
-                Cache::set($product_id.":self_limit", $product_data["self_limit"]);
-                Cache::set($product_id.":group_limit", $product_data["group_limit"]);
+//                Cache::set($product_id . ":stock", $product_data["remain"]);
 
+                //库存写入redis缓存，做队列处理
+                $redis = new \Redis2();
+                //记录商品是否为限购库存商品
+                if ($product_data["remain"] != -1) {
+                    //有库存限制
+                    $redis->set($product_id . ":remain", 1);
+                    $redis->delKey($product_id . ":stock");
+                    for ($i = 0; $i < $product_data["remain"]; $i++) {
+                        $redis->lpush($product_id . ":stock", 1);
+                    }
+                } else {
+                    //无库存限制
+                    $redis->set($product_id . ":remain", 0);
+                }
+
+                Cache::set($product_id . ":self_limit", $product_data["self_limit"]);
+                Cache::set($product_id . ":group_limit", $product_data["group_limit"]);
 
 
                 //二次添加商品处理加入团购商品列表
@@ -161,13 +177,13 @@ class Header extends Controller
                             'self_limit' => $product_data['self_limit'],
                             'ord' => $product_data['ord'],
                             'product_desc' => $product_data['product_desc'],
-                            'tag_name'=>$product_data['tag_name'],
+                            'tag_name' => $product_data['tag_name'],
                             'header_product_id' => $product_id
                         ];
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();
                     }
-                    if(Cache::has($val["group_id"].":product_list")){
-                        Cache::rm($val["group_id"].":product_list");
+                    if (Cache::has($val["group_id"] . ":product_list")) {
+                        Cache::rm($val["group_id"] . ":product_list");
                     }
                 }
                 //二次编辑添加商品处理结束
@@ -184,7 +200,7 @@ class Header extends Controller
                 }
                 $res3 = model('HeaderGroupProductSwiper')->saveAll($swiper);
                 //更新商品图片信息
-                Cache::set($product_id.":swiper", $product_swiper);
+                Cache::set($product_id . ":swiper", $product_swiper);
                 if (!$res3) {
                     throw new Exception('商品轮播保存失败');
                 }
@@ -366,16 +382,16 @@ class Header extends Controller
         if ($group['header_id'] != $this->header_id) {
             exit_json(-1, '登陆用户与团购创建用户不同');
         } else {
-            if($group["comp_status"]){
+            if ($group["comp_status"]) {
                 exit_json(-1, "军团已结算，不可二次开启");
             }
             $res = $group->save(['status' => 1, 'open_time' => date('Y-m-d H:i')]);
 //            model("Group")->save(["status"=>1], ["header_group_id"=>$group_id]);
             if ($res) {
                 $g_list = model("Group")->where(["header_group_id" => $group_id])->select();
-                foreach ($g_list as $item){
+                foreach ($g_list as $item) {
                     $item->save(["status" => 1]);
-                    Cache::rm($item["id"].":groupBaseInfo");
+                    Cache::rm($item["id"] . ":groupBaseInfo");
                 }
                 exit_json();
             } else {
@@ -461,8 +477,8 @@ class Header extends Controller
             $data->save(['status' => 1]);
             $user = model('User')->where('id', $data['user_id'])->find();
             $user->save(['role_status' => 2, "header_id" => $this->header_id, "telephone" => $data['telephone'], "address" => $data["address"], "residential" => $data["residential"], "neighbours" => $data["neighbours"], "have_group" => $data["have_group"], "have_sale" => $data["have_sale"], "work_time" => $data["work_time"], "name" => $data["name"]]);
-            Cache::rm($user["id"].":user");
-            Cache::rm($user["open_id"].":user");
+            Cache::rm($user["id"] . ":user");
+            Cache::rm($user["open_id"] . ":user");
             exit_json();
         } else {
             exit_json(-1, '申请记录不存在或已处理');
@@ -498,14 +514,14 @@ class Header extends Controller
         if (!$group || $group["status"] == 2) {
             exit_json(-1, "团购不存在或已结束");
         } else {
-            model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
+            model("GroupPush")->save(["status" => 1], ["group_id" => $group_id]);
             $res = $group->save(["status" => 2]);
             if ($res) {
 //                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
                 $g_list = model("Group")->where(["header_group_id" => $group_id, "status" => ["neq", 2]])->select();
-                foreach ($g_list as $item){
+                foreach ($g_list as $item) {
                     $item->save(["status" => 2, "close_time" => date("Y-m-d H:i")]);
-                    Cache::rm($item["id"].":groupBaseInfo");
+                    Cache::rm($item["id"] . ":groupBaseInfo");
                 }
 
                 //军团销售汇总
@@ -562,7 +578,7 @@ class Header extends Controller
     {
         $group_id = input("group_id");
         $res = model("HeaderGroup")->comAccount($group_id, $this->header_id);
-        if($res === false){
+        if ($res === false) {
             exit_json(-1, model("HeaderGroup")->getError());
         }
         exit_json();
@@ -712,7 +728,7 @@ class Header extends Controller
                 //同意申请退款
                 $weixin = new WeiXinPay();
                 $order = model("Order")->where("order_no", $refund["order_no"])->find();
-                $refund_money = round($refund["num"] * $refund["group_price"],2);
+                $refund_money = round($refund["num"] * $refund["group_price"], 2);
                 $refund_order = [
                     "order_no" => $refund["order_no"],
                     "trade_no" => $order["transaction_id"],
@@ -720,7 +736,7 @@ class Header extends Controller
                     "total_money" => $order["order_money"],
                     "refund_money" => $refund_money,
                     "shop_id" => $refund["leader_id"],
-                    "refund_desc" => "团购退款".",".$refund['product_name']."-".$refund["reason"],
+                    "refund_desc" => "团购退款" . "," . $refund['product_name'] . "-" . $refund["reason"],
 //                    "notify_url"=>"https://www.ybt9.com/wapp/Pub/orderRefund"
                 ];
                 Log::error($refund_order);
@@ -847,7 +863,7 @@ class Header extends Controller
 
         $header = model("Header")->where("id", $this->header_id)->find();
 
-        $sum_money1 = round($sum_money * (1 - 0.006)-$coupon_fee, 2);
+        $sum_money1 = round($sum_money * (1 - 0.006) - $coupon_fee, 2);
         $header->save([
             "amount_able" => $header["amount_able"] + $sum_money1,
             "amount_lock" => $header["amount_lock"] - $sum_money1
@@ -857,7 +873,7 @@ class Header extends Controller
             $leader = model("User")->where("id", $item["leader_id"])->find();
             $leader->save([
                 "amount_able" => round($leader["amount_able"] + $item["sum_money"] * (1 - 0.006), 2),
-                "amount_lock" => round($leader["amount_lock"] - $item["sum_money"] * (1 - 0.006),2)
+                "amount_lock" => round($leader["amount_lock"] - $item["sum_money"] * (1 - 0.006), 2)
             ]);
             model("Order")->isUpdate(true)->save(["commission_status" => 1], ["header_group_id" => $group_id]);
         }
@@ -1034,8 +1050,8 @@ class Header extends Controller
         $res = $weixin->withdrawBank([
             "amount" => $money,
             "bank_no" => $bank["bank_no"],
-            "bank_code"=>$bank["bank_code"],
-            "true_name"=>$bank["true_name"],
+            "bank_code" => $bank["bank_code"],
+            "true_name" => $bank["true_name"],
             "desc" => "军团提现到银行卡到账",
             "order_no" => $order_no
         ]);

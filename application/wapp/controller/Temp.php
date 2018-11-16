@@ -9,6 +9,7 @@
 namespace app\wapp\controller;
 
 
+use app\common\model\WeiXinPay;
 use think\Cache;
 use think\Controller;
 use think\Log;
@@ -16,330 +17,381 @@ use think\Log;
 class Temp extends Controller
 {
 
+    private $user;
     protected function _initialize()
     {
         parent::_initialize();
-
-    }
-
-    /**
-     * 测试七牛上传
-     *
-     */
-    public function testUpload()
-    {
-        set_time_limit(0);
-        echo time().get_millisecond();
-        echo ",";
-        $list = model("ProductSwiper")->select();
-        $num = 0;
-        $bad = 0;
-        foreach ($list as $item){
-            $res = \Qiniu::Upload($item["url"]);
-            if($res["err"] == 1){
-                $bad++;
-            }else{
-                $num++;
-                $item->save(["url"=>$res['data']]);
-            }
-        }
-        echo $num.":".$bad;
-        echo ",";
-        echo time().get_millisecond();
-        exit;
-    }
-
-    public function asyncImg()
-    {
-        set_time_limit(0);
-        $list = model("ProductSwiper")->column("url");
-        foreach ($list as $item){
-            $file_name = basename($item);
-            $plist = model("HeaderGroupProductSwiper")->whereLike("swiper_url", "%$file_name")->select();
-            foreach ($plist as $p){
-                $p->save(["swiper_url"=>$item]);
-            }
-        }
-        exit("ok");
-        
-    }
-
-    /**
-     * 删除指定资源
-     */
-    public function delUpload()
-    {
-        $file_name = basename(input("key"));
-        $res = \Qiniu::delFile($file_name);
-        print_r($res);
-        exit;
-    }
-
-    function test1()
-    {
-        if(!session("order_token")){
-            session("order_token", time());
-        }else{
-            if(time() - session("order_token")<30){
-                exit_json(-1, "订单处理中。。。");
-            }else{
-                session("order_token", time());
-            }
-        }
-        exit_json();
-
-    }
-
-    public function f()
-    {
-        Cache::dec("num");
-        $pid = 606;
-        exit_json(1, "",Cache::get($pid.":swiper"));
-//        print_r(Cache::get("num"));
-        exit();
-    }
-
-    public function drawImage()
-    {
-        $image = imagecreatetruecolor(1080, 1728);
-        $white = imagecolorallocate($image, 255, 255, 255);
-        imagefill($image, 0, 0, $white);
-
-        //获取图片类型  添加商品图片
-        $good_image = "http://www.ybt9.com/upload/20181016/47dc86ad67f77cb781a8202de1390f3e.jpg";
-        $default_image = "";
-        $ext = getimagesize($good_image);
-        switch ($ext["mime"]) {
-            case "image/png":
-                $p_img = imagecreatefrompng($good_image);
-                break;
-            case "image/jpg":
-                $p_img = imagecreatefromjpeg($good_image);
-                break;
-            case "image/jpeg":
-                $p_img = imagecreatefromjpeg($good_image);
-                break;
-            default:
-                $p_img = imagecreatefrompng($default_image);
-        }
-        imagecopy($image, $p_img, 0, 0, 0, 0, 1080, 1080);
-
-        //添加头像
-        // 填充背景色
-        $col_ellipse = imagecolorallocate($image, 0, 147, 185);
-        //1。添加头像边框
-        imagefilledellipse($image, 120, 120, 160, 160, $col_ellipse);
-        //2.添加团长昵称边框
-        $header_name = "大帅锅cxgsdfv是德";
-        $header_size = $this->getFontLen(40, $header_name);
-        $x1 = 170;
-        $y1 = 85;
-        $x2 = $x1 + $header_size + 60;
-        $y2 = 165;
-        $radius = 20;
-        $this->drawRadiusRec($image, $x1, $y1, $x2, $y2, $radius, $col_ellipse);
-
-        //添加团长昵称
-        imagefttext($image, 40, 0, 220, 150, $white, __PUBLIC__ . '/MicrosoftYahei.ttf', $header_name);
-
-        //3.添加头像
-        $header_image = imagecreatefromstring(file_get_contents("https://wx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKxbXEP8NNU0Y1FJhPLPoQQsTQE3YgpJP6REJu2zXc4icYIJib9o4LoZ42l0oicsZKgoDHQiaUaNAW1Ew/132"));
-
-        list($header_width, $header_height) = getimagesize("https://wx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKxbXEP8NNU0Y1FJhPLPoQQsTQE3YgpJP6REJu2zXc4icYIJib9o4LoZ42l0oicsZKgoDHQiaUaNAW1Ew/132");
-        $w = min($header_height, $header_width);
-        $h = $w;
-        $newpic = imagecreatetruecolor($w, $h);
-        imagealphablending($newpic, false);
-        $transparent = imagecolorallocatealpha($newpic, 0, 0, 0, 127);
-        $r = $w / 2;
-        for ($x = 0; $x < $w; $x++)
-            for ($y = 0; $y < $h; $y++) {
-                $c = imagecolorat($header_image, $x, $y);
-                $_x = $x - $w / 2;
-                $_y = $y - $h / 2;
-                if ((($_x * $_x) + ($_y * $_y)) < ($r * $r)) {
-                    imagesetpixel($newpic, $x, $y, $c);
-                } else {
-                    imagesetpixel($newpic, $x, $y, $transparent);
-                }
-            }
-        imagesavealpha($newpic, true);
-        imagecopy($image, $newpic, 55, 55, 0, 0, $w, $h);
-        imagedestroy($newpic);
-
-        //添加商品价格
-        $good_price = sprintf("%.2f", 15.58);
-        $len = $this->getFontLen(100, $good_price);
-        $this->drawRadiusRec($image, 40, 1100, 40 + $len + 40, 1260, 20, $col_ellipse);
-        imagefttext($image, 100, 0, 60, 1230, $white, __PUBLIC__ . '/MicrosoftYahei.ttf', $good_price);
-
-        $font_color = imagecolorallocate($image, 51, 51, 51);
-        //添加团购标题
-        $group_title = "优鲜团-优选天下团";
-        $title_len = $this->getFontLen(40, $group_title);
-        $font_size = round($title_len / mb_strlen($group_title));
-        if ($title_len > 860) {
-            $font_num = round(860 / $font_size);
-            $group_title = mb_substr($group_title, 0, $font_num - 3);
-            $group_title .= "...";
-            $title_len = 860;
-        }
-        $title_color = imagecolorallocatealpha($image, 255, 255, 255, 64);
-        $this->drawRadiusRec($image, 1080 - $title_len - 20, 770, 1180, 870, 20, $title_color);
-        imagefttext($image, 40, 0, 1080 - $title_len, 845, $font_color, __PUBLIC__ . '/MicrosoftYahei.ttf', $group_title);
-
-        //商品名称
-        $good_name = "超细纤维毛巾 2条/份sdf但是烦恼呢那份翻了翻你阿苏丹诺夫啦额午饭路径是你德飞了阿就不说多了阿部分为阿善良德飞";
-        $name_len = $this->getFontLen(40, $good_name);
-        $font_size = round($name_len / mb_strlen($good_name));
-        if ($name_len > 860) {
-            $font_num = round(860 / $font_size);
-            $good_name = mb_substr($good_name, 0, $font_num - 3);
-            $good_name .= "...";
-            $name_len = 860;
-        }
-        $this->drawRadiusRec($image, 1080 - $name_len - 20, 920, 1180, 1020, 20, $title_color);
-        imagefttext($image, 40, 0, 1080 - $name_len, 995, $font_color, __PUBLIC__ . '/MicrosoftYahei.ttf', $good_name);
-//
-//        //商品描述
-        $good_desc = "我司想好似德飞呢我就sdfsadgasdf从你的少女啦你路径了老师德飞路径sdfasdgfasdfsdfssdfs安德飞了今年劳动节撒妇女林彼此啊千百次不过分  阿善良的空间分辨率阿部分 i 女人按时到了觉得舒服呢拉德斯基你发了确认办法";
-        $start_x = 40;
-        $start_y = 1320;
-        $str_arr = preg_split('/(?<!^)(?!$)/u', $good_desc);
-        $index = 0;
-        foreach ($str_arr as $val) {
-            $font_con = imagefttext($image, 30, 0, $start_x, $start_y, $font_color, __PUBLIC__ . '/MicrosoftYahei.ttf', $val);
-            $start_x = max($font_con[2], $font_con[4]) + 5;
-            if ($start_x + 5 > 1000) {
-                $index += 1;
-                $start_y = $start_y + 60;
-                $start_x = 40;
-            }
-            if ($index == 1 && $start_x + 5 > 950) {
-                imagefttext($image, 30, 0, $start_x, $start_y, $font_color, __PUBLIC__ . '/MicrosoftYahei.ttf', "...");
-                break;
-            }
-        }
-
-        //添加分割线
-        $style = array($font_color, $font_color, $font_color, $font_color, $font_color, $white, $white, $white, $white, $white);
-        imagesetstyle($image, $style);
-        imageline($image, 0, 1400, 1080, 1400, IMG_COLOR_STYLED);
-
-
-        //二维码简述
-        $font_color1 = imagecolorallocate($image, 102, 102, 102);
-        imagefttext($image, 40, 0, 40, 1510, $font_color1, __PUBLIC__ . '/MicrosoftYahei.ttf', "长按识别或扫描二维码");
-        imagefttext($image, 40, 0, 40, 1620, $font_color1, __PUBLIC__ . '/MicrosoftYahei.ttf', "更多优质商品等您挑选");
-
-        //添加二维码
-        $group_id = 41;
-        $access_token = getAccessToken();
-        $ch = curl_init();
-        $url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=" . $access_token;
-        $post_data = [
-            "scene" => $group_id,
-            "page" => "pages/members/membersDetails/membersDetails"
+        $this->user = [
+            "id"=>522
         ];
-        curl_setopt($ch, CURLOPT_URL, $url);
-        // 执行后不直接打印出来
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        // 设置请求方式为post
-        curl_setopt($ch, CURLOPT_POST, true);
-        // post的变量
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
-        // 请求头，可以传数组
-//        curl_setopt($ch, CURLOPT_HEADER, $header);
-        // 跳过证书检查
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        // 不从证书中检查SSL加密算法是否存在
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        $output = curl_exec($ch);
-        curl_close($ch);
-        $qr_code = imagecreatefromstring($output);
-        list($qr_code_width, $qr_code_height) = getimagesizefromstring($output);
-        imagecopyresized($image, $qr_code, 750, 1428, 0, 0, 300, 300, $qr_code_width, $qr_code_height);
-        header("content-type:image/png");
-        imagejpeg($image, __UPLOAD__."/erweima/".$group_id."-22.jpg", 40);
-//        imagejpeg($image, "./".$group_id."-22.jpg", 5);
-        imagedestroy($image);
-        exit();
-
     }
 
-    function drawRadiusRec(&$image, $x1, $y1, $x2, $y2, $radius, $col_ellipse)
-    {
-        //顶部矩形
-        imagefilledrectangle($image, $x1 + $radius, $y1, $x2 - $radius, $y1 + $radius, $col_ellipse);
-        //右边矩形
-        imagefilledrectangle($image, $x2 - $radius, $y1 + $radius, $x2, $y2 - $radius, $col_ellipse);
-        //下边矩形
-        imagefilledrectangle($image, $x1 + $radius, $y2 - $radius, $x2 - $radius, $y2, $col_ellipse);
-        //左边矩形
-        imagefilledrectangle($image, $x1, $y1 + $radius, $x1 + $radius, $y2 - $radius, $col_ellipse);
-        //中间矩形
-        imagefilledrectangle($image, $x1 + $radius, $y1 + $radius, $x2 - $radius, $y2 - $radius, $col_ellipse);
-
-//         draw circled corners  添加圆角
-        imagefilledarc($image, $x1 + $radius, $y1 + $radius, $radius * 2, $radius * 2, 180, 270, $col_ellipse, IMG_ARC_EDGED);
-        imagefilledarc($image, $x2 - $radius, $y1 + $radius, $radius * 2, $radius * 2, 270, 360, $col_ellipse, IMG_ARC_EDGED);
-        imagefilledarc($image, $x1 + $radius, $y2 - $radius, $radius * 2, $radius * 2, 90, 180, $col_ellipse, IMG_ARC_EDGED);
-        imagefilledarc($image, $x2 - $radius, $y2 - $radius, $radius * 2, $radius * 2, 0, 90, $col_ellipse, IMG_ARC_EDGED);
-    }
-
-    //获取文字所占长度
-    function getFontLen($font_size, $string)
-    {
-        $header_size = imagettfbbox($font_size, 0, __PUBLIC__ . '/MicrosoftYahei.ttf', $string);
-        return $header_size[2] - $header_size[0];
-    }
-
-
-    public function subcribe()
-    {
-        $redis = new \Redis();
-        $redis->connect("127.0.0.1", "6379");
-        $redis->auth("tsing");
-        $redis->subscribe(["chat1"], "subcall");
-    }
-
-    function subcall($redis, $chan, $msg)
-    {
-        Log::error("123123123123123");
-    }
-
-    public function pubs()
-    {
-        $redis = new \Redis();
-        $redis->connect("127.0.0.1", "6379");
-        $redis->auth("tsing");
-        $redis->publish("chat1", "woshi chat");
-
-    }
-
-
-    /**
-     * 测试方法
-     */
     public function test()
     {
-        Log::error(input("msg"));
+        $redis = new \Redis2();
+        print_r($redis->set("num", 1));
+        exit();
+
+    }
+
+    public function test1()
+    {
+        $l = fopen(__PUBLIC__."/lock.txt", "w");
+        echo time();
+        if(flock($l, LOCK_EX)){
+            echo time();
+        }
+        exit;
+    }
+
+
+
+
+
+
+
+    /**
+     * 检测商品库存
+     */
+    public function checkProductRemain()
+    {
+//        $product_id = input('product_id');
+        $product_id = 6089;
+//        $group_id = input('group_id');
+        $group_id = 311;
+        $group = model("Group")->getGroupBaseInfo($group_id);
+        if ($group["status"] != 1) {
+            exit_json(-1, "团购未开启或已结束");
+        }
+        $num = input('num');
+        if (Cache::has($product_id . ":groupProduct")) {
+            $product = Cache::get($product_id . ":groupProduct");
+        } else {
+            $product = model('GroupProduct')->where('id', $product_id)->find();
+            Cache::set($product_id . ":groupProduct", $product);
+        }
+        $header_product_id = $product['header_product_id'];
+        $header_product_id = "454";
+        $num = 1;
+
+        //校验商品库存数量是否正常
+        $redis = new \Redis2();
+        if ($redis->get($header_product_id . ":remain") == 1) {
+            //如若为库存商品
+            if ($num > $redis->llen($header_product_id . ":stock")) {
+                logs("我选的时候库存不足了");
+
+                exit_json(-1, "商品剩余库存不足");
+            }
+        }
+
+
+        $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
+        $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
+
+
+        //TODO  商品购买数量待优化
+        $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
+        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
+
+        //团员限购
+        if ($self_limit > 0 && $self_limit < $self_num + $num) {
+            exit_json(-1, '商品个人限购' . $self_limit . '件');
+        }
+
+        //团限购
+        if ($group_limit > 0 && $group_num + $num > $group_limit) {
+            exit_json(-1, '该商品团限购' . $group_limit . '件，还剩' . ($num - 1));
+        }
+//        }
+        logs("我选的时候库存还是足的");
+        exit_json(1, '库存充足');
     }
 
     /**
-     *
+     * 校验库存合法
      */
-    public function getZSet()
+    public function checkOrder()
     {
-        $redis = new \Redis();
-        $redis->connect("127.0.0.1", "6379");
-        $redis->auth("tsing");
-        $list = $redis->zRevRange("group_1", 0, -1);
-        foreach ($list as $value) {
-            $value = json_decode($value, true);
-            echo $value["user_name"];
+
+//        $product_list = input("product_list/a");
+
+        $product_list = json_decode('[{"id":6089,"leader_id":2116,"header_group_id":41,"group_id":311,"header_product_id":454,"product_name":"豆上佳","product_desc":"可以吸的橙子别样鲜，富含多重维生素等营养成分，鲜美多汁，皮薄无核，含糖量高达15°，甜蜜鲜橙，🎊细腻化渣，甘甜爽口，果香浓郁，爽爆味蕾。","commission":"0.00","market_price":"10.00","group_price":"1.00","tag_name":"热销秒杀","product_img":[{"types":1,"urlImg":"http://phyf590if.bkt.clouddn.com/7cb03254cf50e0850e6e0c659a113159.jpg"}],"remain":10,"num":1},{"id":6090,"leader_id":2116,"header_group_id":41,"group_id":311,"header_product_id":455,"product_name":"豆上佳","product_desc":"可以吸的橙子别样鲜，富含多重维生素等营养成分，鲜美多汁，皮薄无核，含糖量高达15°，甜蜜鲜橙，🎊细腻化渣，甘甜爽口，果香浓郁，爽爆味蕾。","commission":"0.00","market_price":"10.00","group_price":"1.00","tag_name":"热销秒杀","product_img":[{"types":1,"urlImg":"http://phyf590if.bkt.clouddn.com/7cb03254cf50e0850e6e0c659a113159.jpg"}],"remain":10,"num":1}]', true);
+        $lock = fopen(__PUBLIC__ . "/lock.txt", "w");
+        if (flock($lock, LOCK_EX)) {
+            $redis = new \Redis2();
+            //判断上次请求是否有锁定库存
+            $remain_order = model("OrderRemainPre")->where("user_id", $this->user['id'])->where("status", 0)->select();
+            $weixin = new WeiXinPay();
+            foreach ($remain_order as $value) {
+                $r = $weixin->orderQuery($value["order_no"]);
+                if (!$r) {
+                    $value->save(["status" => 2]);
+                    $p_list = json_decode($value["product_info"], true);
+                    foreach ($p_list as $item) {
+                        //添加库存缓存
+                        for ($i = 0; $i < $item["num"]; $i++) {
+                            $redis->lpush($item["header_product_id"] . ":stock", 1);
+                        }
+                    }
+                }
+            }
+            $bol = false;
+            $pro_name = "";
+            $pro_arr = [];
+            $temp = [];
+            foreach ($product_list as $item) {
+                $group_limit = model("HeaderGroupProduct")->getGroupLimit($item["header_product_id"]);
+                if ($redis->get($item["header_product_id"] . ":remain") == 1) {
+                    if ($redis->llen($item["header_product_id"].":stock") < $item["num"]) {
+                        $bol = true;
+                        $pro_name .= $item["product_name"] . "、";
+                    } else {
+                        if ($group_limit > 0) {
+                            $pro_arr[] = [
+                                "header_product_id" => $item["header_product_id"],
+                                "num" => $item["num"],
+                                "product_id" => $item["id"],
+                                "is_group" => true
+                            ];
+                        } else {
+                            $pro_arr[] = [
+                                "header_product_id" => $item["header_product_id"],
+                                "num" => $item["num"],
+                                "product_id" => $item["id"],
+                                "is_group" => false
+                            ];
+                        }
+                        for ($j=0;$j<$item["num"];$j++){
+                            $redis->lpop($item["header_product_id"].":stock");
+                        }
+                        $temp[] = [
+                            "header_product_id"=>$item["header_product_id"],
+                            "num"=>$item["num"]
+                        ];
+                    }
+                }
+
+            }
+            if ($bol) {
+                //回归库存
+                foreach ($temp as $value){
+                    for($i=0;$i<$value["num"];$i++){
+                        $redis->lpush($value["header_product_id"].":stock", 1);
+                    }
+                }
+                flock($lock, LOCK_UN);
+                fclose($lock);
+                logs1("好难过，我没抢着");
+                exit_json(-1, $pro_name . "抱歉，商品已被抢光");
+            }
+            $order_no = getOrderNo();
+            $res = model("OrderRemainPre")->insert([
+                "user_id" => $this->user["id"],
+                "order_no" => $order_no,
+                "product_info" => json_encode($pro_arr),
+                "create_time" => time(),
+                "status" => 0
+            ]);
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            if ($res) {
+                logs1("我抢着了");
+                exit_json(1, '请求成功', ["order_no" => $order_no]);
+            } else {
+                Log::error("库存订单处理失败");
+                exit_json(-1, "订单生成失败");
+            }
+        } else {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            exit_json(-1, "系统异常");
         }
     }
+    /**
+     * 校验库存合法
+     */
+    public function checkOrder1()
+    {
+
+//        $product_list = input("product_list/a");
+
+        $product_list = json_decode('[{"id":6089,"leader_id":2116,"header_group_id":41,"group_id":311,"header_product_id":454,"product_name":"豆上佳","product_desc":"可以吸的橙子别样鲜，富含多重维生素等营养成分，鲜美多汁，皮薄无核，含糖量高达15°，甜蜜鲜橙，🎊细腻化渣，甘甜爽口，果香浓郁，爽爆味蕾。","commission":"0.00","market_price":"10.00","group_price":"1.00","tag_name":"热销秒杀","product_img":[{"types":1,"urlImg":"http://phyf590if.bkt.clouddn.com/7cb03254cf50e0850e6e0c659a113159.jpg"}],"remain":10,"num":1}]', true);
+        $lock = fopen(__PUBLIC__ . "/lock.txt", "w");
+        if (flock($lock, LOCK_EX)) {
+            $redis = new \Redis2();
+            //判断上次请求是否有锁定库存
+//            $remain_order = model("OrderRemainPre")->where("user_id", $this->user['id'])->where("status", 0)->select();
+//            $weixin = new WeiXinPay();
+//            foreach ($remain_order as $value) {
+//                $r = $weixin->orderQuery($value["order_no"]);
+//                if (!$r) {
+//                    $value->save(["status" => 2]);
+//                    $p_list = json_decode($value["product_info"], true);
+//                    foreach ($p_list as $item) {
+//                        //添加库存缓存
+//                        for ($i = 0; $i < $item["num"]; $i++) {
+//                            $redis->lpush($item["header_product_id"] . ":stock", 1);
+//                        }
+//                    }
+//                }
+//            }
+            $bol = false;
+            $pro_name = "";
+            $pro_arr = [];
+            $temp = [];
+            foreach ($product_list as $item) {
+                $group_limit = model("HeaderGroupProduct")->getGroupLimit($item["header_product_id"]);
+                if ($redis->get($item["header_product_id"] . ":remain") == 1) {
+                    if ($redis->llen($item["header_product_id"].":stock") < $item["num"]) {
+                        $bol = true;
+                        $pro_name .= $item["product_name"] . "、";
+                    } else {
+                        if ($group_limit > 0) {
+                            $pro_arr[] = [
+                                "header_product_id" => $item["header_product_id"],
+                                "num" => $item["num"],
+                                "product_id" => $item["id"],
+                                "is_group" => true
+                            ];
+                        } else {
+                            $pro_arr[] = [
+                                "header_product_id" => $item["header_product_id"],
+                                "num" => $item["num"],
+                                "product_id" => $item["id"],
+                                "is_group" => false
+                            ];
+                        }
+                        for ($j=0;$j<$item["num"];$j++){
+                            $redis->lpop($item["header_product_id"].":stock");
+                        }
+                        $temp[] = [
+                            "header_product_id"=>$item["header_product_id"],
+                            "num"=>$item["num"]
+                        ];
+                    }
+                }
+
+            }
+            if ($bol) {
+                //回归库存
+                foreach ($temp as $value){
+                    for($i=0;$i<$value["num"];$i++){
+                        $redis->lpush($value["header_product_id"].":stock", 1);
+                    }
+                }
+                flock($lock, LOCK_UN);
+                fclose($lock);
+                logs1("好难过，我没抢着");
+                exit_json(-1, $pro_name . "抱歉，商品已被抢光");
+            }
+            $order_no = getOrderNo();
+            $res = model("OrderRemainPre")->insert([
+                "user_id" => $this->user["id"],
+                "order_no" => $order_no,
+                "product_info" => json_encode($pro_arr),
+                "create_time" => time(),
+                "status" => 0
+            ]);
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            if ($res) {
+                logs1("我抢着了");
+                exit_json(1, '请求成功', ["order_no" => $order_no]);
+            } else {
+                Log::error("库存订单处理失败");
+                exit_json(-1, "订单生成失败");
+            }
+        } else {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+            exit_json(-1, "系统异常");
+        }
+    }
+
+    /**
+     * 获取立即下单
+     */
+    public function makeOrder()
+    {
+        $order_no = input("order_no");
+        if (!$order_no) {
+            exit_json(-1, "订单参数错误");
+        }
+        $remain_pre = model("OrderRemainPre")->where("order_no", $order_no)->find();
+        if ($remain_pre["status"] == 2) {
+            exit_json(-1, "订单已超时， 请重新下单");
+        }
+        $header_id = input('header_id');
+        $leader_id = input('leader_id');
+        $header_group_id = input('header_group_id');
+        $group_id = input('group_id');
+        $user_id = $this->user['id'];
+        $pick_type = input('pick_type');
+        $pick_address = input('pick_address');
+        $pay_type = input('pay_type');
+        $user_name = input('user_name');
+        $user_telephone = input('user_telephone');
+        $remarks = input('remarks');
+        $product_list = input('product_list/a');
+        $product_list = array_filter($product_list, function ($item) {
+            if ($item["num"] == 0) {
+                return false;
+            } else {
+                return true;
+            }
+        });
+        $order_money = 0;
+        foreach ($product_list as $item) {
+            $order_money += $item['group_price'] * $item['num'];
+        }
+        $order_money = round($order_money, 2);
+        $group = model("Group")->where('id', $group_id)->find();
+        if ($group['status'] != 1) {
+            exit_json(-1, '当前团购已结束');
+        }
+        $data = [
+            'order_no' => $order_no,
+            'header_id' => $header_id,
+            'leader_id' => $leader_id,
+            'header_group_id' => $header_group_id,
+            'group_id' => $group_id,
+            'user_id' => $user_id,
+            'pick_type' => $pick_type,
+            'pick_address' => $pick_address,
+            'pay_type' => $pay_type,
+//            'pay_status' => $pay_status,
+            'user_name' => $user_name,
+            'user_telephone' => $user_telephone,
+            'remarks' => $remarks,
+            'order_money' => $order_money,
+            'product_list' => $product_list
+        ];
+        $weixin = new WeiXinPay();
+        $order_info = [
+            "subject" => "易贝通团购-订单支付",
+            "body" => "订单支付",
+            "out_trade_no" => $data['order_no'],
+            "total_amount" => $data['order_money'],
+            "trade_type" => "JSAPI",
+            "open_id" => $this->user['open_id'],
+            "time_start" => date("YmdHis", $remain_pre->getData("create_time")),
+            "time_expire" => date("YmdHis", $remain_pre->getData("create_time") + 300)
+        ];
+        $notify_url = config('notify_url');
+        model('OrderPre')->startTrans();
+        $res = model('OrderPre')->save(['order_no' => $order_no, "order_det" => json_encode($data)]);
+        $order_pre = $weixin->createPrePayOrder($order_info, $notify_url);
+        $order_pre["order_no"] = $order_no;
+        if ($res && $order_pre) {
+            model('OrderPre')->commit();
+            exit_json(1, '请求成功', $order_pre);
+        } else {
+            model('OrderPre')->rollback();
+            exit_json(-1, '系统错误');
+        }
+    }
+    
 
 
 }

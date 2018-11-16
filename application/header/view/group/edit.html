@@ -23,6 +23,18 @@
             </div>
         </div>
         <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">军团类型：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <label>
+                    <input type="radio" name="is_sec" value="0" disabled {if $group.is_sec eq 0}checked="checked"{/if} class="checkbox">普通团购
+                </label>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <label>
+                    <input type="radio" name="is_sec" value="1" disabled {if $group.is_sec eq 1}checked="checked"{/if} class="checkbox">秒杀团
+                </label>
+            </div>
+        </div>
+        <div class="row cl">
             <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>团长取货方式：</label>
             <div class="formControls col-xs-8 col-sm-9">
                 <label>
@@ -340,6 +352,9 @@
             return;
         }
         data["product_list"] = pro_arr;
+        layer.load(1, {
+            shadow:[0.5, "#000"]
+        });
         $.post("{:url('Group/applyGroup')}", data, function (res) {
             if (res.code == 1) {
                 layer.alert("保存成功",function () {

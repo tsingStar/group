@@ -81,7 +81,7 @@ class Group extends ShopBase
         if ($group["status"] != 0) {
             exit_json(-1, "团购已开启");
         } else {
-            if($group["comp_status"]){
+            if ($group["comp_status"]) {
                 exit_json(-1, "军团已结算，不可二次开启");
             }
             $group->status = 1;
@@ -89,9 +89,9 @@ class Group extends ShopBase
             $res = $group->save();
             if ($res) {
                 $g_list = model("Group")->where(["header_group_id" => $group_id])->select();
-                foreach ($g_list as $item){
+                foreach ($g_list as $item) {
                     $item->save(["status" => 1]);
-                    Cache::rm($item["id"].":groupBaseInfo");
+                    Cache::rm($item["id"] . ":groupBaseInfo");
                 }
                 exit_json();
             } else {
@@ -110,14 +110,14 @@ class Group extends ShopBase
         if (!$group || $group["status"] == 2) {
             exit_json(-1, "团购不存在或已结束");
         } else {
-            model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
+            model("GroupPush")->save(["status" => 1], ["group_id" => $group_id]);
             $res = $group->save(["status" => 2]);
             if ($res) {
 //                model("Group")->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
                 $g_list = model("Group")->where(["header_group_id" => $group_id, "status" => ["neq", 2]])->select();
-                foreach ($g_list as $item){
+                foreach ($g_list as $item) {
                     $item->save(["status" => 2, "close_time" => date("Y-m-d H:i")]);
-                    Cache::rm($item["id"].":groupBaseInfo");
+                    Cache::rm($item["id"] . ":groupBaseInfo");
                 }
                 exit_json();
             } else {
@@ -134,7 +134,7 @@ class Group extends ShopBase
     {
         $group_id = input("group_id");
         $res = model("HeaderGroup")->comAccount($group_id, HEADER_ID);
-        if($res === false){
+        if ($res === false) {
             exit_json(-1, model("HeaderGroup")->getError());
         }
         exit_json();
@@ -155,7 +155,8 @@ class Group extends ShopBase
             'dispatch_info' => input('dispatch_info'),
             'is_close' => input('is_close'),
             'status' => input('status'),
-            'close_time' => input("close_time")
+            'close_time' => input("close_time"),
+            "is_sec" => input("is_sec")
         ];
         $group_id = input('group_id');
         if ($group_id == 0 && $data["status"] == 1) {
@@ -178,7 +179,7 @@ class Group extends ShopBase
 
             //编辑军团信息完成后，添加缓存信息
             $data["id"] = $group_id;
-            Cache::set($group_id.":HeaderGroup", $data);
+            Cache::set($group_id . ":HeaderGroup", $data);
 
             if (!$res1) {
                 throw new Exception('创建团购失败');
@@ -219,9 +220,26 @@ class Group extends ShopBase
                     $product_id = model('HeaderGroupProduct')->getLastInsID();
                 }
                 //更新每个商品库存
-                Cache::set($product_id.":stock", $product_data["remain"]);
-                Cache::set($product_id.":self_limit", $product_data["self_limit"]);
-                Cache::set($product_id.":group_limit", $product_data["group_limit"]);
+//                Cache::set($product_id . ":stock", $product_data["remain"]);
+                //库存写入redis缓存，做队列处理
+                $redis = new \Redis2();
+                //记录商品是否为限购库存商品
+                if ($product_data["remain"] != -1) {
+                    //有库存限制
+                    $redis->set($product_id . ":remain", 1);
+                    $redis->delKey($product_id . ":stock");
+                    for ($i = 0; $i < $product_data["remain"]; $i++) {
+                        $redis->lpush($product_id . ":stock", 1);
+                    }
+                } else {
+                    //无库存限制
+                    $redis->set($product_id . ":remain", 0);
+                }
+
+                //保存商品个人限购及团限购
+                Cache::set($product_id . ":self_limit", $product_data["self_limit"]);
+                Cache::set($product_id . ":group_limit", $product_data["group_limit"]);
+
 
                 //二次添加商品处理加入团购商品列表
 //                $group_list = db()->query("select * from (SELECT * FROM ts_group_product WHERE  header_group_id = $group_id ORDER BY ord desc) a GROUP BY a.group_id");
@@ -253,8 +271,8 @@ class Group extends ShopBase
                         model("GroupProduct")->data($data_temp)->isUpdate(false)->save();
                     }
                     //删除团购商品列表
-                    if(Cache::has($val["group_id"].":product_list")){
-                        Cache::rm($val["group_id"].":product_list");
+                    if (Cache::has($val["group_id"] . ":product_list")) {
+                        Cache::rm($val["group_id"] . ":product_list");
                     }
                 }
                 //二次编辑添加商品处理结束
@@ -277,7 +295,7 @@ class Group extends ShopBase
                 }
                 $res3 = model('HeaderGroupProductSwiper')->saveAll($swiper);
                 //更新商品图片信息
-                Cache::set($product_id.":swiper", $swiper_data);
+                Cache::set($product_id . ":swiper", $swiper_data);
                 if (!$res3) {
                     throw new Exception('商品轮播保存失败');
                 }
@@ -386,7 +404,7 @@ class Group extends ShopBase
     {
         $group_id = input("group_id");
         $g = model("HeaderGroup")->where("id", $group_id)->find();
-        if($g && $g["status"] == 2){
+        if ($g && $g["status"] == 2) {
             exit_json(-1, "团购已结束");
         }
         $leader_list = explode(",", input("leader_id"));

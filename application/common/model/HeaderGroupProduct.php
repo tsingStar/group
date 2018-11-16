@@ -21,15 +21,19 @@ class HeaderGroupProduct extends Model
     protected $autoWriteTimestamp = true;
 
     /**
-     * 获取商品库存
+     * 获取商品库存  方法废弃
      * @param $header_product_id
      * @return mixed
      */
     public function getRemain($header_product_id)
     {
         if(!Cache::has($header_product_id.":stock")){
-            $remain = $this->where("id", $header_product_id)->value("remain");
-            Cache::set($header_product_id.":stock", $remain);
+            $l = fopen(__PUBLIC__."/1.txt", "w");
+            if(flock($l, LOCK_EX)){
+                $remain = $this->where("id", $header_product_id)->value("remain");
+                Cache::set($header_product_id.":stock", $remain);
+                flock($l, LOCK_UN);
+            }
         }
         return Cache::get($header_product_id.":stock");
 

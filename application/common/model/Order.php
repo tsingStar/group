@@ -9,6 +9,7 @@
 namespace app\common\model;
 
 
+use think\Log;
 use think\Model;
 
 class Order extends Model
@@ -31,6 +32,11 @@ class Order extends Model
         foreach ($product_list as $item){
             //军团商品处理
             $hgp = \model("HeaderGroupProduct")->where("id", $item['header_product_id'])->setInc('sell_num', $item['num']);
+            $sql = "update ts_header_group_product set remain=remain-".$item["num"]." where remain-".$item["num"].">=0 and id=".$item["header_product_id"];
+            $res = db()->execute($sql);
+            if(!$res){
+                Log::error("军团商品处理失败");
+            }
 //            $hgp->setInc('sell_num', $item['num']);
 //            if($hgp["remain"] !=-1){
 ////                $remain = $hgp['remain']-$item['num'];
