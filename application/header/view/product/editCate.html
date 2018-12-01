@@ -1,0 +1,46 @@
+{include file='pub/header'/}
+<title>商品分类</title>
+</head>
+<body>
+<div class="page-container">
+    <form class="form form-horizontal" id="form-product-add" enctype="multipart/form-data" method="post">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>分类名称：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" value="{$item.cate_name||default=''}" placeholder="" name="cate_name" required>
+            </div>
+        </div>
+        <div class="row cl">
+            <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-2">
+                <button class="btn btn-secondary radius" type="submit"><i class="Hui-iconfont Hui-iconfont-save"></i> 保存
+                </button>
+                <button onClick="layer_close();" class="btn btn-default radius" type="button">
+                    &nbsp;&nbsp;取消&nbsp;&nbsp;
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+</body>
+{include file="pub/footer"/}
+<script type="text/javascript">
+    $(function () {
+        $("#form-product-add").validate({
+            onkeyup: false,
+            focusCleanup: true,
+            success: "valid",
+            submitHandler: function (form) {
+                $(form).ajaxSubmit(function (res) {
+                    if (res.code == 1) {
+                        parent.location.reload();
+                    } else {
+                        layer.msg(res.msg);
+                    }
+                })
+            }
+        });
+    });
+
+</script>
+</html>

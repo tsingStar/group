@@ -6,11 +6,16 @@
  * Time: 下午3:33
  */
 
-$redis = new Redis();
-$redis->connect("127.0.0.1", "6379");
-$redis->auth("tsing");
-$redis->subscribe(["chat1"], "subcall");
-exit();
-function subcall($redis, $chan, $msg){
-    file_get_contents("http://group.com/wapp/Temp/test?msg=".$msg);
+echo spinWords("Hey fellow warriors");
+function spinWords($string){
+    $arr_str = explode(" ", $string);
+    $dst_str = [];
+    foreach($arr_str as $val){
+        if(mb_strlen($val)>=5){
+            $val = strrev($val);
+        }
+        $dst_str[] = $val;
+    }
+    return implode(" ", $dst_str);
+    //TODO Have fun :)
 }

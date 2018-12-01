@@ -101,7 +101,7 @@ class User extends Controller
         $leader_id = db("LeaderRecord")->where("user_id", $this->user["id"])->value("leader_id");
         $page = input('page');
         $page_num = input('page_num');
-        $list = model('Group')->alias('a')->join('User b', "a.leader_id=b.id")->where('a.leader_id', $leader_id)->field('a.id group_id, a.status, a.open_time, a.title, a.notice, b.user_name, b.avatar')->order('a.create_time desc')->limit($page * $page_num, $page_num)->select();
+        $list = model('Group')->alias('a')->join('User b', "a.leader_id=b.id")->where('a.leader_id', $leader_id)->field('a.id group_id, a.header_group_id, a.status, a.open_time, a.title, a.notice, b.user_name, b.avatar')->order('a.create_time desc')->limit($page * $page_num, $page_num)->select();
         $data = Group::formatGroupList($list);
         exit_json(1, '请求成功', $data);
     }
@@ -113,31 +113,18 @@ class User extends Controller
     {
         $group_id = input('group_id');
         //获取团购基本信息
-//        $group = model('Group')->where("id", $group_id)->field('id group_id, header_group_id, header_id, leader_id, dispatch_type, dispatch_info, title, notice, pay_type, status, scan_num')->find();
         $group = model("Group")->getGroupBaseInfo($group_id);
         if (!$group) {
             exit_json(-1, '当前团购不存在');
         }
 
         //团员上次访问团长记录
-//        $lr = db("LeaderRecord")->where("user_id", $this->user["id"])->find();
-//        if ($lr) {
-//            db("LeaderRecord")->where(["user_id" => $this->user["id"]])->update(["leader_id" => $group["leader_id"]]);
-//        } else {
-//            db("LeaderRecord")->insert(["user_id" => $this->user["id"], "leader_id" => $group["leader_id"]]);
-//        }
         Cache::set($this->user["id"] . ":leaderRecord", $group["leader_id"]);
         //保存访问记录
         curl_request(__URL__ . "/wapp/Async/saveLeaderRecord", ["user_id" => $this->user['id'], "leader_id" => $group["leader_id"]], 0.005);
-//        file_get_contents(__URL__."/wapp/Async/saveLeaderRecord?user_id=".$this->user['id']."&leader_id=".$group["leader_id"]);
 
 
         //统计访问量---数据库统计
-//        $uv = db("Uv")->where("user_id", $this->user["id"])->where("group_id", $group_id)->find();
-//        if (!$uv) {
-//            db("Uv")->insert(["user_id" => $this->user["id"], "group_id" => $group_id]);
-//            $group->save(["scan_num" => $group["scan_num"] + 1]);
-//        }
         $uv = Cache::get($group_id . ":Uv", []);
         if (!in_array($this->user["id"], $uv)) {
             $uv[] = $this->user["id"];
@@ -145,34 +132,21 @@ class User extends Controller
             //保存访问量
             curl_request(__URL__ . "/wapp/Async/saveScanNum", ["group_id" => $group_id], 0.005);
         }
-        $group["scan_num"] = count(Cache::get($group_id . ":Uv"));
+        $scan_num = count(Cache::get($group_id . ":Uv"));
 
-        //团购商品列表
-//        $product_list = model('GroupProduct')->alias("a")->join("HeaderGroupProduct b", "a.header_product_id=b.id")->where('a.group_id', $group_id)->field('a.id, a.leader_id, a.header_group_id, a.group_id, a.header_product_id, a.product_name, a.product_desc, a.commission, a.market_price, a.group_price, a.tag_name, b.remain')->order('a.ord')->select()
-//        $product_list = model('GroupProduct')->where('group_id', $group_id)->field('id, leader_id, header_group_id, group_id, header_product_id, product_name, product_desc, commission, market_price, group_price, tag_name')->order('ord')->select();
-        //缓存获取商品列表
-        $product_list = model("GroupProduct")->getProductList($group_id);
+        //获取团购商品列表  城主统一管理
+        $product_list = model('HeaderGroupProduct')->getProductList($group["header_group_id"]);
         $redis = new \Redis2();
         foreach ($product_list as $value) {
-            $value['product_img'] = model('HeaderGroupProductSwiper')->getSwiper($value["header_product_id"]);
             //添加商品库存
-//            $value["remain"] = model("HeaderGroupProduct")->getRemain($value["header_product_id"]);
-            if($redis->get($value["header_product_id"].":remain") == 1){
-                $value["remain"] = $redis->llen($value["header_product_id"].":stock");
+            if($redis->get($value["id"].":remain") == 1){
+                $value["remain"] = $redis->llen($value["id"].":stock");
             }else{
                 $value["remain"] = -1;
             }
-
         }
 
         //获取显示状态
-//        $config = db("HeaderConfig")->where("header_id", $group["header_id"])->find();
-//        if (!$config) {
-//            db("HeaderConfig")->insert(["header_id" => $group["header_id"]]);
-//            $show = 1;
-//        } else {
-//            $show = $config["sale_detail_show"];
-//        }
 //        if(Cache::has($group["header_id"].":sale_detail_show")){
 //            $show = Cache::get($group["header_id"].":sale_detail_show");
 //        }else{
@@ -185,21 +159,20 @@ class User extends Controller
 //            }
 //            Cache::set($group["header_id"].":sale_detail_show", $show);
 //        }
-        //是否显示团购基本状况
+////        是否显示团购基本状况
 //        if($show){
 //            $order_money = model("Order")->where("group_id", $group_id)->sum("order_money");
 //            $order_num = model("Order")->where("group_id", $group_id)->count();
 //            $group['sale_detail'] = [
 //                "is_show" => $show,
 //                "detail" => [
-//                    "scan_number" => $group["scan_num"],
+//                    "scan_number" => $scan_num,
 //                    "order_number" => $order_num,
 //                    "order_money" => $order_money
 //                ]
 //            ];
 //        }
         $group['product_list'] = $product_list;
-//        $leader = model("User")->where("id", $group["leader_id"])->find();
         $leader = model("User")->getUserInfo($group["leader_id"]);
         $group["user_name"] = $leader["user_name"];
         $group["avatar"] = $leader["avatar"];
@@ -265,27 +238,15 @@ class User extends Controller
      */
     public function checkProductRemain()
     {
-        $product_id = input('product_id');
+//        $product_id = input('product_id');
+        //团购id
         $group_id = input('group_id');
         $group = model("Group")->getGroupBaseInfo($group_id);
         if ($group["status"] != 1) {
             exit_json(-1, "团购未开启或已结束");
         }
         $num = input('num');
-//        $lock1 = fopen(__PUBLIC__ . "/lock1.txt", "w");
-//        if (flock($lock1, LOCK_EX)) {
-
-//            $product = model('GroupProduct')->where('id', $product_id)->find();
-        if (Cache::has($product_id . ":groupProduct")) {
-            $product = Cache::get($product_id . ":groupProduct");
-        } else {
-            $product = model('GroupProduct')->where('id', $product_id)->find();
-            Cache::set($product_id . ":groupProduct", $product);
-        }
-//            $header_product = model('HeaderGroupProduct')->where('id', $product['header_product_id'])->find();
-        $header_product_id = $product['header_product_id'];
-//            $remain = model("HeaderGroupProduct")->getRemain($header_product_id);
-
+        $header_product_id = input('product_id');
         //校验商品库存数量是否正常
         $redis = new \Redis2();
         if ($redis->get($header_product_id . ":remain") == 1) {
@@ -294,24 +255,11 @@ class User extends Controller
                 exit_json(-1, "商品剩余库存不足");
             }
         }
-
-
-        $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
-        $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
-
-        //TODO  商品购买数量待优化
-        $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
-        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
-        //团员限购
-        if ($self_limit > 0 && $self_limit < $self_num + $num) {
-            exit_json(-1, '商品个人限购' . $self_limit . '件');
+        //校验商品限购状态及开始状态
+        $limit = $this->checkLimit($header_product_id, $group_id, 0, $num, $group["header_group_id"]);
+        if(!is_bool($limit)){
+            exit_json(-1, $limit);
         }
-
-        //团限购
-        if ($group_limit > 0 && $group_num + $num > $group_limit) {
-            exit_json(-1, '该商品团限购' . $group_limit . '件，还剩' . ($num - 1));
-        }
-
         exit_json(1, '库存充足');
     }
 
@@ -320,9 +268,14 @@ class User extends Controller
      */
     public function checkOrder()
     {
-
         $product_list = input("product_list/a");
-
+        //团购id
+        $group_id = input("group_id");
+        //军团id
+        $header_group_id = input("header_group_id");
+        if(!$group_id){
+            exit_json(-1, "团购不存在");
+        }
         $lock = fopen(__PUBLIC__ . "/lock.txt", "w");
         if (flock($lock, LOCK_EX)) {
             $redis = new \Redis2();
@@ -349,39 +302,41 @@ class User extends Controller
             $temp = [];
             foreach ($product_list as $item) {
 
-                $group_limit = model("HeaderGroupProduct")->getGroupLimit($item["header_product_id"]);
-                $limit = $this->checkLimit($item["header_product_id"], $item["group_id"], $item["id"], $item["num"]);
+                $group_limit = model("HeaderGroupProduct")->getGroupLimit($item["id"]);
+
+                //校验秒杀状态及限购状态
+                $limit = $this->checkLimit($item["id"], $group_id, 0, $item["num"], $header_group_id);
                 if(!is_bool($limit)){
                     $bol = true;
-                    $pro_name .= $limit;
+                    $pro_name = $limit;
                     break;
                 }
-                if ($redis->get($item["header_product_id"] . ":remain") == 1) {
-                    if ($redis->llen($item["header_product_id"].":stock") < $item["num"]) {
+                if ($redis->get($item["id"] . ":remain") == 1) {
+                    if ($redis->llen($item["id"].":stock") < $item["num"]) {
                         $bol = true;
-                        $pro_name .= $item["product_name"] . "、";
+                        $pro_name = $item["product_name"]."已抢光";
                         break;
                     } else {
                         if ($group_limit > 0) {
                             $pro_arr[] = [
-                                "header_product_id" => $item["header_product_id"],
+                                "header_product_id" => $item["id"],
                                 "num" => $item["num"],
-                                "product_id" => $item["id"],
+                                "product_id" => 0,
                                 "is_group" => true
                             ];
                         } else {
                             $pro_arr[] = [
-                                "header_product_id" => $item["header_product_id"],
+                                "header_product_id" => $item["id"],
                                 "num" => $item["num"],
-                                "product_id" => $item["id"],
+                                "product_id" => 0,
                                 "is_group" => false
                             ];
                         }
                         for ($j=0;$j<$item["num"];$j++){
-                            $redis->lpop($item["header_product_id"].":stock");
+                            $redis->lpop($item["id"].":stock");
                         }
                         $temp[] = [
-                            "header_product_id"=>$item["header_product_id"],
+                            "header_product_id"=>$item["id"],
                             "num"=>$item["num"]
                         ];
                     }
@@ -397,7 +352,7 @@ class User extends Controller
                 }
                 flock($lock, LOCK_UN);
                 fclose($lock);
-                exit_json(-1,  "抱歉，商品".$pro_name ."已被抢光");
+                exit_json(-1,  "抱歉，".$pro_name);
             }
             $order_no = getOrderNo();
 
@@ -422,13 +377,27 @@ class User extends Controller
         }
     }
 
-    function checkLimit($header_product_id, $group_id, $product_id, $num){
+    function checkLimit($header_product_id, $group_id, $product_id, $num, $header_group_id){
+        //获取军团基本信息
+        if(Cache::has($header_group_id.":HeaderGroup")){
+            $header_group = Cache::get($header_group_id.":HeaderGroup");
+        }else{
+            $header_group = model("HeaderGroup")->field("group_title, header_id, group_notice, dispatch_type, dispatch_info, is_close, status, close_time, is_sec, sec_time")->where("id", $header_group_id)->find()->getData();
+            Cache::set($header_group_id.":HeaderGroup", $header_group);
+        }
+        if(isset($header_group["sec_time"]) && $header_group["sec_time"]>time()){
+            return '商品将于'.date("H:i:s", $header_group["sec_time"]).'开始抢购，请稍后...';
+        }
         $self_limit = model("HeaderGroupProduct")->getSelfLimit($header_product_id);
         $group_limit = model("HeaderGroupProduct")->getGroupLimit($header_product_id);
+        $start_time = model("HeaderGroupProduct")->getProductStartTime($header_product_id);
+        if($start_time>0 && $start_time>time()){
+            return '商品将于'.date("Y-m-d H:i:s", $start_time).'开售';
+        }
 
         //TODO  商品购买数量待优化
-        $group_num = model('OrderDet')->where('group_id', $group_id)->where('product_id', $product_id)->sum('num-back_num');
-        $self_num = model("OrderDet")->where('group_id', $group_id)->where('product_id', $product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
+        $group_num = model('OrderDet')->where('group_id', $group_id)->where('header_product_id', $header_product_id)->sum('num-back_num');
+        $self_num = model("OrderDet")->where('group_id', $group_id)->where('header_product_id', $header_product_id)->where("user_id", $this->user["id"])->sum('num-back_num');
         //团员限购
         if ($self_limit > 0 && $self_limit < $self_num + $num) {
             return '商品个人限购' . $self_limit . '件';
@@ -477,20 +446,19 @@ class User extends Controller
             }
         });
         $order_money = 0;
-//        $bol = true;
-//        $product_name = "";
+        $product_data = [];
         foreach ($product_list as $item) {
-//            $header_product = model('HeaderGroupProduct')->where('id', $item['header_product_id'])->find();
-//            if ($header_product["remain"] != -1 && $header_product["remain"] < $item["num"]) {
-//                $bol = false;
-//                $product_name .= $header_product["product_name"] . "、";
-//
-//            }
             $order_money += $item['group_price'] * $item['num'];
+            $temp = $item;
+            unset($temp["product_img"]);
+            $product_name = $item["product_name"];
+            if($item["attr"] != ""){
+                $product_name .= $item["attr"]."*";
+            }
+            $product_name .= $item["num"].$item["unit"]."/份";
+            $temp["product_name"] = $product_name;
+            $product_data[] = $temp;
         }
-//        if (!$bol) {
-//            exit_json(-1, $product_name . "商品库存不足");
-//        }
         $order_money = round($order_money, 2);
         $group = model("Group")->where('id', $group_id)->find();
         if ($group['status'] != 1) {
@@ -511,7 +479,7 @@ class User extends Controller
             'user_telephone' => $user_telephone,
             'remarks' => $remarks,
             'order_money' => $order_money,
-            'product_list' => $product_list
+            'product_list' => $product_data
         ];
         $weixin = new WeiXinPay();
         $order_info = [
@@ -529,7 +497,6 @@ class User extends Controller
         $res = model('OrderPre')->save(['order_no' => $order_no, "order_det" => json_encode($data)]);
         $order_pre = $weixin->createPrePayOrder($order_info, $notify_url);
         $order_pre["order_no"] = $order_no;
-//        $order_pre = true;
         if ($res && $order_pre) {
             model('OrderPre')->commit();
             exit_json(1, '请求成功', $order_pre);
@@ -544,7 +511,7 @@ class User extends Controller
      */
     public function getOrderList()
     {
-        $list = model('Order')->alias('a')->join('Group b', 'a.group_id=b.id')->where('user_id', $this->user['id'])->field("b.title, a.create_time, a.pick_status, a.order_no, a.order_money-a.refund_money final_cost")->select();
+        $list = model('Order')->alias('a')->join('Group b', 'a.group_id=b.id')->where('user_id', $this->user['id'])->field("b.title, a.create_time, a.pick_status, a.order_no, a.order_money-a.refund_money final_cost")->order("a.create_time desc")->select();
         exit_json(1, '请求成功', $list);
     }
 
@@ -557,8 +524,8 @@ class User extends Controller
         $order = model("Order")->where("order_no", $order_no)->where('user_id', $this->user['id'])->find();
         $product_list = model('OrderDet')->where('order_no', $order_no)->select();
         foreach ($product_list as $item) {
-//            $item['product_swiper'] = model('HeaderGroupProductSwiper')->where('header_group_product_id', $item['header_product_id'])->field('swiper_type types, swiper_url urlImg')->cache(true)->order("create_time")->select();
-            $item['product_swiper'] = model('HeaderGroupProductSwiper')->getSwiper($item["header_product_id"]);
+            $base_id = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->value("base_id");
+            $item['product_swiper'] = model('ProductSwiper')->getSwiper($base_id);
         }
         $order['product_list'] = $product_list;
         exit_json(1, '请求成功', $order);

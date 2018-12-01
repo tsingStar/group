@@ -1,0 +1,74 @@
+{include file='pub/header'/}
+<title>商品入库</title>
+</head>
+<body>
+<div class="page-container">
+    <form class="form form-horizontal" action="{:url('stockRecord')}" id="form-product-add" enctype="multipart/form-data" method="post">
+        <input type="hidden" value="{$item.id}" name="product_id">
+        <input type="hidden" value="1" name="type">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2"><span class="c-red">*</span>商品名称：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" disabled value="{$item.product_name}">
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">商品库存剩余：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" readonly name="stock" value="{$item.stock}">
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">入库数量：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" name="num" value="0">
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">进货价：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" name="purchase_price" value="0">
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">市场价：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input type="text" class="input-text" name="market_price" value="0">
+            </div>
+        </div>
+
+        <div class="row cl">
+            <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-2">
+                <button class="btn btn-secondary radius" type="submit"><i class="Hui-iconfont">&#xe632;</i> 确定
+                </button>
+                <button onClick="layer_close();" class="btn btn-default radius" type="button">
+                    &nbsp;&nbsp;取消&nbsp;&nbsp;
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+</body>
+{include file="pub/footer"/}
+
+<script type="text/javascript">
+    $(function () {
+        $("#form-product-add").validate({
+            onkeyup: false,
+            focusCleanup: true,
+            success: "valid",
+            submitHandler: function (form) {
+                $(form).ajaxSubmit(function (res) {
+                    if (res.code == 1) {
+                        parent.location.reload();
+                    } else {
+                        layer.msg(res.msg);
+                    }
+                })
+            }
+        });
+    });
+
+</script>
+</html>

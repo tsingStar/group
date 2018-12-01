@@ -32,20 +32,25 @@ class Order extends Model
         foreach ($product_list as $item){
             //军团商品处理
             $hgp = \model("HeaderGroupProduct")->where("id", $item['header_product_id'])->setInc('sell_num', $item['num']);
-            $sql = "update ts_header_group_product set remain=remain-".$item["num"]." where remain-".$item["num"].">=0 and id=".$item["header_product_id"];
-            $res = db()->execute($sql);
-            if(!$res){
-                Log::error("军团商品处理失败");
-            }
-//            $hgp->setInc('sell_num', $item['num']);
-//            if($hgp["remain"] !=-1){
-////                $remain = $hgp['remain']-$item['num'];
-////                $remain = $remain<0?0:$remain;
-////                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num'], "remain"=>$remain]);
-//                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
-//            }else{
-//                $hgp->save(['sell_num'=>$hgp['sell_num']+$item['num']]);
+//            $sql = "update ts_header_group_product set remain=remain-".$item["num"]." where remain-".$item["num"].">=0 and id=".$item["header_product_id"];
+//            $res = db()->execute($sql);
+//            if(!$res){
+//                Log::error("军团商品处理失败".$item["header_product_id"]);
 //            }
+
+            //处理商品库存
+            $product = model("HeaderGroupProduct")->where("id", $item["header_product_id"])->find();
+            $base_pro = model("Product")->where("id", $product['base_id'])->find();
+//            model("ProductStockRecord")->data([
+//                "type"=>2,
+//                "product_id"=>$product["base_id"],
+//                "group_price"=>$item["group_price"],
+//                "num"=>$item["num"]*$product["num"],
+//                "stock_before"=>$base_pro["stock"],
+//                "stock_after"=>$base_pro["stock"]-$item["num"]*$product["num"]
+//            ])->isUpdate(false)->save();
+            $base_pro->setDec("stock", $item["num"]*$product["num"]);
+
             //团购商品处理
             \model('GroupProduct')->where('id', $item['product_id'])->setInc('sell_num', $item['num']);
         }

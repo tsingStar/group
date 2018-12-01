@@ -1,18 +1,32 @@
 ﻿{include file='pub/header'/}
 <title>商品列表</title>
+<style>
+    .td-manage a{
+        display: inline-block;
+    }
+</style>
 </head>
 <body class="pos-r">
 <div>
     <div class="page-container">
         <div class="text-c">
             <form action="" method="get">
-            商品名称：<input type="text" name="product_name" value="{$param.product_name|default=''}" id="" placeholder=" 商品名称" style="width:250px" class="input-text">
+                商品名称：<input type="text" name="product_name" autocomplete="false" value="{$param.product_name|default=''}" id="" placeholder=" 商品名称" style="width:250px" class="input-text">
+                分类：<span class="select-box" style="width: 200px;">
+                        <select name="cate_id" class="input select">
+                            <option value="">全部</option>
+                            <option value="0" {if isset($param['cate_id']) and 0==$param.cate_id}selected{/if}>未分类</option>
+                            {foreach $cate_list as $key=>$val}
+                            <option value="{$key}" {if isset($param['cate_id']) and $key eq $param.cate_id}selected{/if}>{$val}</option>
+                            {/foreach}
+                        </select>
+                    </span>
             <button class="btn btn-success" type="submit"><i class="Hui-iconfont">&#xe665;</i> 搜商品
             </button>
             </form>
         </div>
         <div class="cl pd-5 bg-1 bk-gray mt-20">
-            <span class="l">
+            <span class="l mr-20">
                 <a class="btn btn-primary radius" onclick="product_add('添加商品','{:url(\'Product/add\')}')" href="javascript:;">
                     <i class="Hui-iconfont">&#xe600;</i> 添加商品
                 </a>
@@ -27,7 +41,12 @@
                 <thead>
                     <tr class="text-c">
                         <th width="40">ID</th>
-                        <th width="100">产品名称</th>
+                        <th width="100">名称</th>
+                        <th width="100">分类</th>
+                        <th width="100">单位</th>
+                        <th width="100">规格</th>
+                        <!--<th width="100">是否为散称</th>-->
+                        <th width="100">库存剩余</th>
                         <th width="100">操作</th>
                     </tr>
                 </thead>
@@ -38,11 +57,44 @@
                     <td>
                         {$item.product_name}
                     </td>
+                    <td>
+                        <span class="select-box">
+                            <select class="select" onchange="changeCate('{$item.id}', this)">
+                                <option value="0">未分类</option>
+                                {foreach $cate_list as $key=>$val}
+                                <option value="{$key}" {if $key eq $item.cate_id}selected{/if}>{$val}</option>
+                                {/foreach}
+                            </select>
+                        </span>
+                    </td>
+                    <td>
+                        {$item.unit}
+                    </td>
+                    <td>
+                        {$item.attr}
+                    </td>
+                    <!--<td>-->
+                        <!--<?php $bulk=[0=>"否", 1=>"是"] ?>-->
+                        <!--{$bulk[$item.is_bulk]}-->
+                    <!--</td>-->
+                    <td>
+                        {$item.stock}
+                    </td>
                     <td class="td-manage">
                         <a style="text-decoration:none" class="ml-5"
                            onClick="product_edit('产品编辑','{:url(\'Product/edit\', [\'product_id\'=>$item.id])}')"
                            href="javascript:;" title="编辑">
                             <i class="Hui-iconfont">&#xe6df;</i>编辑
+                        </a>
+                        <a style="text-decoration:none" class="ml-5"
+                           onClick="layer_show('商品入库','{:url(\'Product/stockAdd\', [\'product_id\'=>$item.id])}')"
+                           href="javascript:;" title="商品入库">
+                            <i class="Hui-iconfont Hui-iconfont-shangjia"></i>商品入库
+                        </a>
+                        <a style="text-decoration:none" class="ml-5"
+                           onClick="layer_show('商品出入库记录','{:url(\'Product/stockList\', [\'product_id\'=>$item.id])}')"
+                           href="javascript:;" title="出入库记录">
+                            <i class="Hui-iconfont Hui-iconfont-list"></i>出入库记录
                         </a>
                         <a style="text-decoration:none" class="ml-5" onClick="product_del(this,'{$item.id}')"
                            href="javascript:;" title="删除">
@@ -61,6 +113,17 @@
 {include file='pub/footer'/}
 <script type="text/javascript">
     // $('.table-sort').dataTable();
+
+    function changeCate(pid,o){
+        let cate_id = $(o).val();
+        $.post("{:url('changeCate')}", {id:pid, cate_id:cate_id}, function (res) {
+            if(res.code == 1){
+                layer.msg("修改成功");
+            }else{
+                layer.msg("修改失败");
+            }
+        });
+    }
 
     /*产品-添加*/
     function product_add(title, url) {

@@ -18,7 +18,7 @@ class OrderDet extends Model
         parent::initialize();
     }
 
-    protected $autoWriteTimestamp = false;
+//    protected $autoWriteTimestamp = false;
 
     /**
      * 获取订单商品详情
@@ -33,9 +33,8 @@ class OrderDet extends Model
         $pro_list = $this->where("order_no", $order_no)->field("leader_id, user_id, product_name, num, market_price, group_price, back_num, status, header_group_id, group_id, product_id, header_product_id")->select();
         foreach ($pro_list as $value) {
             $pid = $value['header_product_id'];
-            $value['product_img'] = HeaderGroupProductSwiper::all(function ($query) use ($pid) {
-                $query->where("header_group_product_id", $pid)->field("swiper_type types, swiper_url urlImg");
-            });
+            $base_id = \model("HeaderGroupProduct")->where("id", $pid)->value("base_id");
+            $value['product_img'] = model('ProductSwiper')->getSwiper($base_id);
         }
         return $pro_list;
     }

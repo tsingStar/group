@@ -258,7 +258,8 @@ return [
     'weixin' => [
         'app_id' => 'wx867e1f8696515384',
         'app_secret' => 'bcce7059af8f6a7457c17eabaa89c94c',
-        'mch_id' => "1490951862",   /*微信申请成功之后邮件中的商户id*/
+//        'mch_id' => "1490951862",   /*微信申请成功之后邮件中的商户id*/
+        "mch_id"=>"1519172331",
         'api_key' => "50F97ECD3CE0A9C8232EA065C614AE71",    /*在微信商户平台上自己设定的api密钥 32位*/
         'cert_path' => __PUBLIC__ . '/apiclient_cert.pem',
         'key_path' => __PUBLIC__ . '/apiclient_key.pem'

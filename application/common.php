@@ -318,7 +318,7 @@ function get_millisecond()
 /**
  * Excel一键导出
  */
-function excel($header, $data, $filename, $num = 1, $extraTitle)
+function excel($header, $data, $filename, $num = 1, $extraTitle=[])
 {
     $error = \Excel::export($header, $data, $filename, '2007', $num, $extraTitle);
     return $error;
@@ -427,9 +427,10 @@ function sendTemplate($order)
  * 请求
  * @param $url
  * @param $param
+ * @param $time_out
  * @return mixed
  */
-function curl_request($url, $param="")
+function curl_request($url, $param="", $time_out=30)
 {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -437,12 +438,31 @@ function curl_request($url, $param="")
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $param);
     }
+    if($time_out>0 && $time_out<1){
+        curl_setopt($ch, CURLOPT_NOSIGNAL,1);
+        curl_setopt($ch, CURLOPT_TIMEOUT_MS,$time_out*1000);
+    }else{
+        curl_setopt($ch, CURLOPT_TIMEOUT, $time_out);
+    }
 //    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 //    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
     curl_setopt($ch, CURLOPT_HEADER, false);
     $file_contents = curl_exec($ch);
     curl_close($ch);
     return $file_contents;
+}
+
+
+function logs($con){
+    $f = fopen(__PUBLIC__."/logs.txt", "a+");
+    fwrite($f, $con."\n");
+    fclose($f);
+}
+
+function logs1($con){
+    $f = fopen(__PUBLIC__."/logs1.txt", "a+");
+    fwrite($f, $con."\n");
+    fclose($f);
 }
 
 

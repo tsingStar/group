@@ -10,6 +10,8 @@ namespace app\header\controller;
 
 
 use app\common\model\ProductSwiper;
+use think\Cache;
+use think\Exception;
 use think\Log;
 
 class Product extends ShopBase
@@ -30,12 +32,36 @@ class Product extends ShopBase
         if (isset($param["product_name"])) {
             $model->whereLike("product_name", "%" . $param["product_name"] . "%");
         }
-        $list = $model->order("id")->paginate(10);
+        if(isset($param["cate_id"]) && $param["cate_id"] != ""){
+            $model->where("cate_id", $param["cate_id"]);
+        }
+        $list = $model->order("stock, id desc")->paginate(10);
         $this->assign('list', $list);
         $this->assign("param", $param);
+        $cate_list = model("Cate")->where("header_id", HEADER_ID)->column("cate_name", "id");
+        $this->assign("cate_list", $cate_list);
         return $this->fetch();
     }
 
+    /**
+     * 分类更改
+     */
+    public function changeCate()
+    {
+        $id = input("id");
+        $cate_id = input("cate_id");
+        $product = model("Product")->where("id", $id)->find();
+        if($product){
+            $res = $product->save(["cate_id"=>$cate_id]);
+            if($res){
+                exit_json();
+            }else{
+                exit_json(-1, "分类变更失败");
+            }
+        }else{
+            exit_json(-1, "商品不存在");
+        }
+    }
     /**
      * 添加商品
      */
@@ -43,9 +69,10 @@ class Product extends ShopBase
     {
         if (request()->isPost()) {
             $data = input('post.');
+            $data["product_name"] = '【'.$data["product_name"].'】';
             $swiper = input("swiper/a");
             $data['header_id'] = session(config('headerKey'));
-            $res = model('Product')->allowField(['product_name', 'desc', 'header_id'])->save($data);
+            $res = model('Product')->allowField(['product_name', 'desc', 'header_id', 'unit', 'is_bulk', 'attr', 'cate_id'])->save($data);
             if (!$res) {
                 exit_json(-1, "添加失败，刷新后重试");
             }
@@ -64,9 +91,76 @@ class Product extends ShopBase
             }
             exit_json();
         }
+        $cate_list = model("Cate")->where("header_id", HEADER_ID)->column("cate_name", "id");
+        $this->assign("cate_list", $cate_list);
+        $unit_list = model("Unit")->where("header_id", HEADER_ID)->column("unit_name");
+        $this->assign("unit_list", $unit_list);
         return $this->fetch();
     }
 
+    /**
+     * 商品入库
+     */
+    public function stockAdd()
+    {
+        $product_id = input("product_id");
+        $product = model("Product")->where("id", $product_id)->find();
+        $this->assign("item", $product);
+        return $this->fetch();
+    }
+
+    /**
+     * 添加入库记录
+     */
+    public function stockRecord()
+    {
+        $product_id = input("product_id");
+        $product = model("Product")->where("id", $product_id)->find();
+        if(!$product){
+            exit_json(-1, "商品不存在，请先添加商品在进行入库操作");
+        }
+        $product->startTrans();
+        model("ProductStockRecord")->startTrans();
+        try{
+            $data = [
+                "product_id"=>$product_id,
+                "purchase_price"=>input("purchase_price"),
+                "market_price"=>input("market_price"),
+                "num"=>input("num"),
+                "type"=>input("type"),
+                "stock_before"=>input("stock"),
+                "stock_after"=>input("stock")+input("num")
+            ];
+            $res1 = model("ProductStockRecord")->save($data);
+            if(!$res1){
+                throw new Exception("添加入库记录失败");
+            }
+
+            $res2 = $product->setInc("stock", $data["num"]);
+            if(!$res2){
+                throw new Exception("增加商品库存失败");
+            }
+            $product->commit();
+            model("ProductStockRecord")->commit();
+            exit_json();
+        } catch (\Exception $e){
+            $product->rollback();
+            model("ProductStockRecord")->rollback();
+            exit_json(-1, $e->getMessage());
+        }
+    }
+
+    /**
+     * 商品出入库记录
+     */
+    public function stockList()
+    {
+        $product = model("Product")->where("id", input("product_id"))->find();
+        $this->assign("product", $product);
+        $list = model("ProductStockRecord")->where("product_id", input("product_id"))->order("create_time desc")->paginate(10);
+        $this->assign("list", $list);
+        return $this->fetch();
+    }
 
     /**
      * 商品编辑
@@ -94,13 +188,18 @@ class Product extends ShopBase
                 }
                 model('ProductSwiper')->where('product_id', $product_id)->delete();
                 model('ProductSwiper')->saveAll($swiper_list);
+                Cache::rm($product_id.":swiper");
             }
-            $product->allowField(['product_name', 'desc'])->save($data);
+            $product->allowField(['product_name', 'cate_id', 'attr', 'unit', 'desc'])->save($data);
             exit_json();
         }
         $swiper_list = model('ProductSwiper')->where('product_id', $product_id)->select();
         $this->assign('item', $product);
         $this->assign('swiper_list', $swiper_list);
+        $cate_list = model("Cate")->where("header_id", HEADER_ID)->column("cate_name", "id");
+        $this->assign("cate_list", $cate_list);
+        $unit_list = model("Unit")->where("header_id", HEADER_ID)->column("unit_name");
+        $this->assign("unit_list", $unit_list);
         return $this->fetch();
     }
 
@@ -120,9 +219,9 @@ class Product extends ShopBase
     }
 
     /**
-     * 产品库商品
+     * 产品库商品_废弃
      */
-    public function getHistory()
+    public function getHistory_back()
     {
         $pro_list = model("Product")->where("header_id", HEADER_ID)->select();
         foreach ($pro_list as $item) {
@@ -244,6 +343,115 @@ class Product extends ShopBase
             exit_json();
         }else{
             exit_json(-1, "操作失败");
+        }
+
+    }
+
+    /**
+     * 分类列表
+     */
+    public function cateIndex()
+    {
+        $list = model("Cate")->where("header_id", HEADER_ID)->order("create_time desc")->paginate(10);
+        $this->assign("list", $list);
+        return $this->fetch();
+    }
+
+    /**
+     * 编辑商品分类
+     */
+    public function editCate()
+    {
+        $cate_id = input("cate_id");
+        $data = input("post.");
+        $cate = model("Cate")->where("id", $cate_id)->find();
+        if(request()->isAjax()){
+            if($cate){
+                $res = $cate->save($data);
+            }else{
+                $data["header_id"] = HEADER_ID;
+                $res = model("Cate")->save($data);
+            }
+            if ($res) {
+                exit_json();
+            } else {
+                exit_json(-1, '保存失败');
+            }
+        }
+        $this->assign("item", $cate);
+        return $this->fetch();
+    }
+
+    /**
+     * 删除分类
+     */
+    public function delCate()
+    {
+        $item = model("Cate")->where("id", input("id"))->find();
+        if($item){
+            $p = model("Product")->where("cate_id", input('id'))->find();
+            if($p){
+                exit_json(-1, "当前分类下存在商品，不可删除分类");
+            }
+            if($item->delete()){
+                exit_json();
+            }else{
+                exit_json(-1, "删除失败");
+            }
+        }else{
+            exit_json(-1, "记录不存在");
+        }
+
+    }
+    /**
+     * 单位列表
+     */
+    public function unitIndex()
+    {
+        $list = model("Unit")->where("header_id", HEADER_ID)->order("create_time desc")->paginate(10);
+        $this->assign("list", $list);
+        return $this->fetch();
+    }
+
+    /**
+     * 编辑单位
+     */
+    public function editUnit()
+    {
+        $cate_id = input("id");
+        $data = input("post.");
+        $cate = model("Unit")->where("id", $cate_id)->find();
+        if(request()->isAjax()){
+            if($cate){
+                $res = $cate->save($data);
+            }else{
+                $data["header_id"] = HEADER_ID;
+                $res = model("Unit")->save($data);
+            }
+            if ($res) {
+                exit_json();
+            } else {
+                exit_json(-1, '保存失败');
+            }
+        }
+        $this->assign("item", $cate);
+        return $this->fetch();
+    }
+
+    /**
+     * 删除单位
+     */
+    public function delUnit()
+    {
+        $item = model("Unit")->where("id", input("id"))->find();
+        if($item){
+            if($item->delete()){
+                exit_json();
+            }else{
+                exit_json(-1, "删除失败");
+            }
+        }else{
+            exit_json(-1, "记录不存在");
         }
 
     }

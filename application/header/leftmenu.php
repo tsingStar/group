@@ -61,6 +61,14 @@ $leftmenu = [
                 'url'=>'Product/index'
             ],
             [
+                'navName'=>'产品分类',
+                'url'=>'Product/cateIndex'
+            ],
+            [
+                'navName'=>'产品单位',
+                'url'=>'Product/unitIndex'
+            ],
+            [
                 'navName'=>'产品标签',
                 'url'=>'Product/tagList'
             ],

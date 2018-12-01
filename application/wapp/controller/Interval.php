@@ -10,6 +10,7 @@ namespace app\wapp\controller;
 
 
 use app\common\model\Group;
+use think\Cache;
 use think\Controller;
 use think\Exception;
 use think\Log;
@@ -53,29 +54,13 @@ class Interval extends Controller
                 $group_id = $value["id"];
                 model("GroupPush")->save(["status"=>1], ["group_id"=>$group_id]);
                 $res = $value->save(["status" => 2]);
+                Cache::rm($value["id"].":HeaderGroup");
                 if ($res) {
-//                    model("Group")->isUpdate(true)->save(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
                     Group::update(["status" => 2, "close_time" => date("Y-m-d H:i")], ["header_group_id" => $group_id, "status" => ["neq", 2]]);
-                    /*//军团销售汇总
-                    $sum_money = model("HeaderGroupProduct")->where("header_group_id", $group_id)->sum("sell_num*group_price*(1-commission/100)");
-                    //团购销售汇总
-                    $group_list = model("GroupProduct")->where("header_group_id", $group_id)->group("group_id")->field("sum(sell_num*group_price*commission/100) sum_money, leader_id, group_id")->select();
-                    model("Header")->where("id", $value["header_id"])->setInc("amount_lock", $sum_money);
-                    model("HeaderMoneyLog")->data([
-                        "header_id" => $value["header_id"],
-                        "type" => 1,
-                        "money" => $sum_money,
-                        "order_no" => $group_id
-                    ])->isUpdate(false)->save();
-                    foreach ($group_list as $item) {
-                        model("User")->where("id", $item["leader_id"])->setInc("amount_lock", $item["sum_money"]);
-                        model("LeaderMoneyLog")->data([
-                            "leader_id" => $item["leader_id"],
-                            "type" => 1,
-                            "money" => $item["sum_money"],
-                            "order_no" => $item["group_id"]
-                        ])->isUpdate(false)->save();
-                    }*/
+                    $id_arr = model("Group")->where(["header_group_id" => $group_id, "status" => ["neq", 2]])->column("id");
+                    foreach ($id_arr as $id){
+                        Cache::rm($id.":groupBaseInfo");
+                    }
                 } else {
                     throw new Exception("团购状态处理失败");
                 }

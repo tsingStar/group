@@ -1,0 +1,207 @@
+﻿{include file='pub/header'/}
+<title>团购列表</title>
+</head>
+<body class="pos-r">
+<div>
+    <div class="page-container">
+
+        <div class="mt-20 cl">
+            <div class="col-xs-6 f-l left"  style="height: inherit">
+                <table class="table table-border table-bordered" id="history">
+                    <thead>
+                    <tr class="text-c">
+                        <th>状态</th>
+                        <th>商品名称</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {foreach $list as $item}
+                    <tr class="{$item.id} text-c"
+                        data-product='{"base_id":{$item.id}, "product_name":"{$item.product_name}", "self_limit":0, "group_limit":0, "purchase_price":0, "market_price":0,"group_price":0, "commission":0, "remain":-1}'>
+                        <td>
+                            <input type="checkbox" class="checked-{$item.id}" onclick="checkIt(this)">
+                        </td>
+                        <td>
+                            {$item.product_name}
+                        </td>
+                        <td>
+                            <a href="javascript:;" class="btn btn-primary radius" data-status="1"
+                               onclick="showHistory('{$item.id}', this)">查看往期</a>
+                        </td>
+                    </tr>
+                    {/foreach}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-xs-6 f-r right">
+                <table class="table table-border table-bordered checked-product">
+                    <tr class="text-c">
+                        <td>已选商品列表</td>
+                        <td>
+                            <a href="javascript:;" class="btn btn-primary radius" onclick="submitProduct()">保存</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{include file='pub/footer'/}
+<script type="text/javascript">
+    $("#history").dataTable({
+        "aLengthMenu": [10],
+        "bSort": false,
+        "lengthChange":false,
+        "info":false
+    });
+
+    /**
+     * 开启往期商品
+     * @param pid
+     */
+    function showHistory(pid, o) {
+        // $(".children-"+pid).toggle();
+        // var status = $(o).data("status");
+        // if (status == 1) {
+            var chd = $(".children-" + pid);
+            if (chd.length > 0) {
+                chd.remove();
+                // $(o).data("status", 0);
+            } else {
+                $.post("{:url('Product/showHistory')}", {id: pid}, function (res) {
+                    var list = res.data;
+                    if (list.length == 0) {
+                        layer.msg("暂无往期商品");
+                    }
+                    var _html = "";
+                    $.each(list, function (i1, v1) {
+                        let prop = '';
+                        if($(".checked-product").find(".item-"+v1.id).length>0){
+                            prop = 'checked';
+                        }
+                        _html += '                <tr class="' + v1.base_id + ' children-' + v1.base_id + ' text-c" style="background-color: #ccc;" data-product=\'{"item_id":'+v1.id+',"base_id":' + v1.base_id + ', "product_name":"' + v1.product_name + '", "self_limit":' + v1.self_limit + ', "group_limit":' + v1.group_limit + ', "purchase_price":' + v1.purchase_price + ', "market_price":' + v1.market_price + ',"group_price":' + v1.group_price + ', "commission":' + v1.commission + ', "remain":' + v1.remain + '}\'>\n' +
+                            '                    <td>\n' +
+                            '                        &nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" class="checked-' + v1.base_id + '" '+prop+' onclick="checkIt(this)">\n' +
+                            '                    </td>\n' +
+                            '                    <td>\n' +
+                            '                        ' + v1.product_name + '\n' +
+                            '                    </td>\n' +
+                            '                    <td>\n' +
+                            '                        市场价：' + v1.market_price + '&nbsp;\n' +
+                            '                        团购价：' + v1.group_price + '\n' +
+                            '                    </td>\n' +
+                            '                </tr>\n';
+                    });
+                    $(o).parent().parent().after(_html);
+                    // $(o).data("status", 0);
+                });
+            }
+        // } else {
+        //     $(".children-" + pid).hide();
+        //     $(o).data("status", 1);
+        // }
+    }
+
+    function createTr(product){
+        var tr = '<tr class="text-c product item-'+product.item_id+' '+product.base_id+'" data-product=\''+JSON.stringify(product)+'\' data-id="'+product.base_id+'">\n' +
+            '                        <td>'+product.product_name+'</td>\n' +
+            '                        <td>\n' +
+            '                            <a href="javascript:;" class="btn btn-primary radius" onclick="remove(this)">删除</a>\n' +
+            '                        </td>\n' +
+            '                    </tr>';
+        return tr;
+
+    }
+
+    /**
+     * 选中商品
+     * @param o
+     */
+    function checkIt(o) {
+        let s = $(o).prop("checked");
+        let className = o.className;
+        $("." + className).prop("checked", false);
+        $(o).prop("checked", s);
+        let product = $(o).parent().parent().data("product");
+        let base_id = product.base_id;
+        if($(".checked-product").find("."+base_id).length>0){
+            $(".checked-product").find("."+base_id).remove();
+        }
+        if(s){
+            //选中商品
+            let tr = createTr(product);
+            $(".checked-product").append(tr);
+        }
+    }
+
+    function remove(o){
+        let t = $(o).parent().parent();
+        let base_id = t.data("id");
+        $(".checked-"+base_id).prop("checked", false);
+        t.remove();
+    }
+
+    function submitProduct() {
+        // var checkTr = $("input[type='checkbox']:checked");
+        var product_arr = new Array();
+        // $.each(checkTr, function (i, v) {
+        //     var p = $(v).parent().parent().data("product");
+        //     product_arr.push(p);
+        // });
+        var l = $(".checked-product").find(".product");
+        $.each(l, function (i, v) {
+                product_arr.push($(v).data("product"));
+        })
+        parent.saveProducts(product_arr);
+        layer_close();
+    }
+
+    // /**
+    //  * 加载更多商品
+    //  */
+    // function getMore(o){
+    //     var page = $(o).data("page");
+    //     $.post("{:url('Product/getHistory')}", {page:page}, function(res){
+    //         var list = res.data;
+    //         var _html = "";
+    //         $.each(list, function(i,v){
+    //             _html += '<tr class="'+v.id+' text-c">\n' +
+    //                 '                    <td>\n' +
+    //                 '                        <input type="checkbox" class="checked-'+v.id+'" onclick="checkIt(this)">\n' +
+    //                 '                    </td>\n' +
+    //                 '                    <td>\n' +
+    //                 '                        '+v.product_name+'\n' +
+    //                 '                    </td>\n' +
+    //                 '                    <td>\n' +
+    //                 '                        <a href="javascript:;" class="btn btn-primary radius" onclick="showHistory('+v.id+')">查看往期</a>\n' +
+    //                 '                    </td>\n' +
+    //                 '                </tr>\n';
+    //             $.each(v.record_list, function(i1, v1){
+    //                 _html += '                <tr class="'+v.id+' children-'+v.id+' text-c" style="display: none;">\n' +
+    //                     '                    <td>\n' +
+    //                     '                        <input type="checkbox" class="checked-'+v.id+'" onclick="checkIt(this)">\n' +
+    //                     '                    </td>\n' +
+    //                     '                    <td>\n' +
+    //                     '                        '+v1.product_name+'\n' +
+    //                     '                    </td>\n' +
+    //                     '                    <td>\n' +
+    //                     '                        市场价：'+v1.market_price+'&nbsp;\n' +
+    //                     '                        团购价：'+v1.group_price+'\n' +
+    //                     '                    </td>\n' +
+    //                     '                </tr>\n';
+    //             })
+    //         });
+    //         if(list.length == 10){
+    //             $(o).data("page", page+1);
+    //             $("tbody").append(_html);
+    //         }else{
+    //             $(o).removeEventListener("click");
+    //             $(o).html("加载完成");
+    //         }
+    //     });
+    // }
+</script>
+</body>
+</html>

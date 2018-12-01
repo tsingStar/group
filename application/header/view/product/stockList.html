@@ -1,0 +1,103 @@
+﻿{include file='pub/header'/}
+<title>出入库明细</title>
+</head>
+<body class="pos-r">
+<div>
+    <div class="page-container">
+        <div class="cl pd-5 bg-1 bk-gray mt-20">
+            <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
+               href="javascript:location.replace(location.href);" title="刷新">
+                <i class="Hui-iconfont">&#xe68f;</i>
+            </a>
+        </div>
+        <div class="mt-20">
+            <table class="table table-border table-bordered table-bg table-hover table-sort">
+                <thead>
+                    <tr class="text-c">
+                        <th width="180">操作时间</th>
+                        <th width="120">商品名称</th>
+                        <th width="100">出入库状态</th>
+                        <th width="100">操作前数量</th>
+                        <th width="100">操作后数量</th>
+                        <th width="100">库存数量</th>
+                        <th width="100">进货价</th>
+                        <th width="100">市场价</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {foreach $list as $item}
+                <tr class="text-c va-m">
+                    <td>
+                        {$item.create_time}
+                    </td>
+                    <td>{$product.product_name}</td>
+                    <td>
+                        <?php $type=[1=>"入库", 2=>"出库"] ?>
+                        {$type[$item.type]}
+                    </td>
+                    <td>
+                        {$item.stock_before}
+                    </td>
+                    <td>
+                        {$item.stock_after}
+                    </td>
+                    <td>
+                        {$item.num}
+                    </td>
+                    <td>
+                        {$item.purchase_price}
+                    </td>
+                    <td>
+                        {$item.market_price}
+                    </td>
+                </tr>
+                {/foreach}
+                </tbody>
+            </table>
+            {$list->render()}
+        </div>
+    </div>
+</div>
+
+{include file='pub/footer'/}
+<script type="text/javascript">
+    // $('.table-sort').dataTable();
+
+    /*产品-添加*/
+    function product_add(title, url) {
+        var index = layer.open({
+            type: 2,
+            title: title,
+            content: url,
+            area:["800px", "600px"]
+        });
+        // layer.full(index);
+    }
+
+    /*产品-编辑*/
+    function product_edit(title, url) {
+        var index = layer.open({
+            type: 2,
+            title: title,
+            content: url,
+            area:["800px", "600px"]
+        });
+        // layer.full(index);
+    }
+
+    /*产品-删除*/
+    function product_del(obj, id) {
+        layer.confirm('确认要删除吗？', function (index) {
+            $.post("{:url('Product/delData')}", {idstr:id}, function (res) {
+                if(res.code == 1){
+                    layer.msg('删除成功');
+                    $(obj).parents('tr').remove();
+                }else{
+                    layer.msg(res.msg);
+                }
+            });
+        });
+    }
+</script>
+</body>
+</html>

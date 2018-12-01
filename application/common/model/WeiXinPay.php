@@ -96,7 +96,7 @@ class WeiXinPay
     public static function getPublicKey()
     {
         if (file_exists(__PUBLIC__ . "/public.pem")) {
-            $pub_key = file_get_contents(file_exists(__PUBLIC__ . "/public.pem"));
+            $pub_key = file_get_contents(__PUBLIC__ . "/public.pem");
             return $pub_key;
         } else {
             $f = fopen(__PUBLIC__ . "/public.pem", "w");

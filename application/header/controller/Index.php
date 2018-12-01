@@ -8,6 +8,7 @@
 
 namespace app\header\controller;
 
+use think\Cache;
 use think\Log;
 use think\Request;
 
@@ -26,6 +27,17 @@ class Index extends ShopBase
         $this->assign('leftmenu', $leftmenu);
         $this->assign('shopInfo', $shop_info);
         return $this->fetch();
+    }
+
+    public function clearCache()
+    {
+        $res = Cache::clear();
+        if($res){
+            exit_json();
+        }else{
+            exit_json(-1, "清空失败");
+        }
+
     }
 
     /**

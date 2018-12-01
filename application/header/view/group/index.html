@@ -1,5 +1,10 @@
 ﻿{include file='pub/header'/}
 <title>团购列表</title>
+<style>
+    a{
+        display: inline-block;
+    }
+</style>
 </head>
 <body class="pos-r">
 <div>
@@ -35,6 +40,7 @@
                         <th width="100">开团时间</th>
                         <th width="100">团购状态</th>
                         <th width="100">结算状态</th>
+                        <th width="100">商品管理</th>
                         <th width="100">操作</th>
                     </tr>
                 </thead>
@@ -69,6 +75,9 @@
                         {else}
                             已结算
                         {/if}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary radius size-MINI" onclick="product_list('团购商品列表','{:url(\'Group/productList\', [\'group_id\'=>$item.id])}')">商品列表</button>
                     </td>
                     <td class="td-manage">
                         <a style="text-decoration:none" class="ml-5"
@@ -121,6 +130,14 @@
 {include file='pub/footer'/}
 <script type="text/javascript">
     // $('.table-sort').dataTable();
+    function product_list(title, url){
+        var index = layer.open({
+            type: 2,
+            title: title,
+            content: url
+        });
+        layer.full(index);
+    }
     function group_edit(group_id){
         var index = layer.open({
             type:2,

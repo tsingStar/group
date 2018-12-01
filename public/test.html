@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+
+
+<script>
+    //选中
+    var arr1 = ["91", "91-2"];
+    //缓存
+    var arr2 = ["91-2"];
+    arr1 = arr2;
+
+    function diff(arr1, arr2){
+        for (var i=0; i< arr1.length; i++){
+            var index = arr2.indexOf(arr1[i]);
+            if(index != -1){
+                arr1.splice(i, 1);
+                arr2.splice(index, 1);
+                i=-1;
+            }
+
+        }
+        return arr1.concat(arr2);
+    }
+    console.log(diff(arr1, arr2));
+
+
+
+
+</script>
+</html>

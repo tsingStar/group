@@ -1,0 +1,256 @@
+﻿{include file='pub/header'/}
+<title>商品列表</title>
+</head>
+<body class="pos-r">
+<div>
+    <div class="page-container">
+        <div class="cl pd-5 bg-1 bk-gray mt-20">
+            <span class="l mr-20">
+                <a class="btn btn-primary radius" onclick="addProduct('添加商品','{:url(\'Group/getHistory\', [\'group_id\'=>$group_id])}')" href="javascript:;">
+                    <i class="Hui-iconfont">&#xe600;</i> 添加商品
+                </a>
+            </span>
+            <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
+               href="javascript:location.replace(location.href);" title="刷新">
+                <i class="Hui-iconfont">&#xe68f;</i>
+            </a>
+        </div>
+        <div class="mt-20">
+            <table class="table table-border table-bordered text-c">
+                <tr class="text-c">
+                    <th width="100">序号（正序）</th>
+                    <th width="300">商品名称</th>
+                    <th width="300">商品标签</th>
+                    <th width="150">团限购</th>
+                    <th width="150">团员限购</th>
+                    <th width="150">每份数量</th>
+                    <th width="150">进货价</th>
+                    <th width="150">团购价</th>
+                    <th width="150">市场价</th>
+                    <th width="150">佣金比例(%)</th>
+                    <th width="150">毛利率(%)</th>
+                    <th width="150">商品限量</th>
+                    <th width="100">销量</th>
+                    <th width="100">开始时间</th>
+                    <th width="100">操作</th>
+                </tr>
+                {foreach $list as $item}
+                <tr class="text-c">
+                    <input type="hidden" value="{$item.header_group_id}" class="group_id">
+                    <input type="hidden" value="{$item.base_id}" class="base_id">
+                    <input type="hidden" value="{$item.attr}" class="attr">
+                    <input type="hidden" value="{$item.unit}" class="unit">
+                    <input type="hidden" value="{:round($item.purchase_price/$item.num, 2)}" class="purchase_price_one">
+                    <input type="hidden" value="{$item.product_desc}" class="product_desc">
+                    <td>
+                        <input type="text" class="input input-text ord" value="{$item.ord}" disabled>
+                    </td>
+                    <td>
+                        <input type="text" class="input input-text product_name" value="{$item.product_name}" disabled>
+                    </td>
+                    <td>
+                        <span class="select-box">
+                            <select name="tag_name" class="input select tag_name"  disabled>
+                                {foreach :json_decode($tag_arr,true) as $tag}
+                                    <option value="{$tag}" {if $tag eq $item.tag_name}selected{/if}>{if $tag eq ""}空白标签{else/}{$tag}{/if}</option>
+                                {/foreach}
+                            </select>
+                        </span>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.group_limit}" class="input input-text group_limit" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.self_limit}" class="input input-text self_limit" disabled>
+                    </td>
+                    <td>
+                        <!--变动联动进货价-->
+                        <input type="text" value="{$item.num}" class="input input-text num" oninput="changeNameAndPrice(this)" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.purchase_price}" class="input input-text purchase_price" oninput="changePurchase(this)" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.group_price}" class="input input-text group_price" oninput="computeRate(this)" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.market_price}" class="input input-text market_price" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.commission}" class="input input-text commission" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{:round(($item.group_price-$item.purchase_price)/$item.group_price,2)*100}" class="input input-text coupon_commission" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.remain}" class="input input-text remain" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.sell_num}" class="input input-text sell_num" disabled>
+                    </td>
+                    <td>
+                        <input type="text" value="{$item.start_time}" onfocus="WdatePicker({startDate: '%y-%M-%d HH:mm:ss' ,dateFmt:'yyyy-MM-dd HH:mm'})" class="input input-text start_time Wdate" disabled>
+                    </td>
+                    <td width="100">
+                        <a href="javascript:;" class="saveProduct" data-pid="{$item.id}" onclick="saveProduct(this)" style="display:none; text-decoration: none;">
+                            <i class="Hui-iconfont Hui-iconfont-save"></i>保存
+                        </a>
+                        <a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: inline-block; text-decoration: none;">
+                            <i class="Hui-iconfont Hui-iconfont-edit"></i>编辑
+                        </a>
+                    </td>
+                </tr>
+                {/foreach}
+            </table>
+        </div>
+    </div>
+</div>
+
+{include file='pub/footer'/}
+<script type="text/javascript">
+
+    /**
+     * 删除单个商品
+     */
+    function delProduct(o){
+        layer.confirm("确定删除此商品？", function (index) {
+            layer.close(index);
+            $(o).parents("tr").remove();
+        });
+    }
+
+    /**
+     * 增加商品
+     */
+    function addProduct(title, url){
+        var index = layer.open({
+            type: 2,
+            shade:0.4,
+            title: title,
+            content: url
+        });
+        layer.full(index);
+    }
+    /**
+     * 联动更改进货价
+     */
+    function changeNameAndPrice(o){
+        var tr = $(o).parents("tr");
+        var num = $(o).val();
+        var one = tr.find(".purchase_price_one").val();
+        if(num<0){
+            layer.msg("商品数量不能小于0");
+            return;
+        }
+        tr.find(".purchase_price").val(parseFloat(one*num));
+        computeRate(o);
+    }
+    /**
+     * 计算毛利率
+     */
+    function computeRate(o){
+        var tr = $(o).parents("tr");
+        var group_price = tr.find(".group_price").val();
+        var purchase_price = tr.find(".purchase_price").val();
+        tr.find(".coupon_commission").val(((group_price-purchase_price)/group_price).toFixed(2)*100);
+    }
+
+    /**
+     * 更改商品进货价
+     */
+    function changePurchase(o){
+        var purchase_price = $(o).val();
+        var num = $(o).parents("tr").find(".num").val();
+        var price_one = (purchase_price/num).toFixed(2);
+        $(o).parents("tr").find(".purchase_price_one").val(price_one);
+        computeRate(o);
+    }
+
+    /**
+     * 编辑商品
+     */
+    function editProduct(o){
+        o.style.display = "none";
+        $(o).prev()[0].style.display = "inline-block";
+        $(o).parents("tr").find(":disabled").removeAttr("disabled");
+    }
+
+    /**
+     * 保存商品信息
+     * @param o 当前处理dom对象
+     * @param pid 新增/更新 0 更新 其他 新增
+     */
+    function saveProduct(o){
+        var pid = $(o).data("pid");
+        var tr = $(o).parents("tr");
+        var product = {};
+        var product_name = tr.find(".product_name").val();
+        product["product_name"] = product_name;
+        product["header_group_id"] = tr.find(".group_id").val();
+        product["base_id"] = tr.find(".base_id").val();
+        product["tag_name"] = tr.find(".tag_name").val();
+        product["attr"] = tr.find(".attr").val();
+        product["num"] = tr.find(".num").val();
+        if(product["num"]<0){
+            layer.msg("每份数量不能小于0");
+            return;
+        }
+        product["unit"] = tr.find(".unit").val();
+        product["remain"] = tr.find(".remain").val();
+        product["commission"] = tr.find(".commission").val();
+        if(product["commission"]<0){
+            layer.msg("商品佣金比例不能小于0");
+            return;
+        }
+        product["purchase_price"] = tr.find(".purchase_price").val();
+        product["market_price"] = tr.find(".market_price").val();
+        product["group_price"] = tr.find(".group_price").val();
+        product["group_limit"] = tr.find(".group_limit").val();
+        product["self_limit"] = tr.find(".self_limit").val();
+        product["ord"] = tr.find(".ord").val();
+        product["start_time"] = tr.find(".start_time").val();
+        product["product_desc"] = tr.find(".product_desc").val();
+        $.post("{:url('Group/saveProduct')}", {product:product, pid:pid}, function (res) {
+            if(res.code == 1){
+                o.style.display = "none";
+                if(pid == 0){
+                    $(o).parent().find(".delProduct").remove();
+                    $(o).data("pid", res.data);
+                }
+                $(o).parent().find(".editProduct").css("display", "inline-block");
+                $(o).parents("tr").find(".input").attr("disabled", "disabled");
+            }
+            layer.msg(res.msg);
+        });
+    }
+    /**
+     * 保存选中商品
+     */
+    function savePro($products) {
+        var _html = "";
+        $.each($products, function (i, v) {
+            _html += '<tr class="text-c"><input type="hidden" value="'+group_id+'" class="group_id"><input type="hidden" value="'+v.base_id+'" class="base_id"><input type="hidden" value="'+v.attr+'" class="attr"><input type="hidden" value="'+v.unit+'" class="unit"><input type="hidden" value="'+v.purchase_price+'" class="purchase_price_one"><input type="hidden" value="'+v.product_desc+'" class="product_desc"><td><input type="text" class="input input-text ord" value="0"></td><td><input type="text" class="input input-text product_name" value="'+v.product_name+'"></td><td><span class="select-box">'+tags+'</span></td><td><input type="text" value="'+v.group_limit+'" class="input input-text group_limit"></td><td><input type="text" value="0" class="input input-text self_limit"></td><td><input type="text" value="1" class="input input-text num" oninput="changeNameAndPrice(this)"></td><td><input type="text" value="'+v.purchase_price+'" class="input input-text purchase_price" oninput="changePurchase(this)"></td><td><input type="text" value="0" class="input input-text group_price" oninput="computeRate(this)"></td><td><input type="text" value="'+v.market_price+'" class="input input-text market_price"></td><td><input type="text" value="0" class="input input-text commission"></td><td><input type="text" value="0" class="input input-text coupon_commission"></td><td><input type="text" value="'+v.remain+'" class="input input-text remain"></td><td><input type="text" value="0" class="input input-text sell_num"></td><td><input type="text" value="" onfocus="WdatePicker({startDate: \'%y-%M-%d HH:mm:ss\' ,dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" class="input input-text start_time Wdate"></td><td width="100"><a href="javascript:;" class="saveProduct" data-pid="0" onclick="saveProduct(this)" style="display:inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-save"></i>保存</a><a href="javascript:;" class="delProduct" onclick="delProduct(this)" style="display: inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-del"></i>删除</a><a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: none; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-edit"></i>编辑</a></td></tr>';
+        });
+        $("table").append(_html);
+    }
+
+    var tags;
+    var group_id = '{$group_id}';
+    $(function () {
+        tags = '<select name="tag_name" id="" class="input select tag_name">\n';
+        $.each({$tag_arr}, function (i, v) {
+            if(v == ""){
+                tags += '    <option value="'+v+'">空白标签</option>\n';
+            }else{
+                tags += '    <option value="'+v+'">'+v+'</option>\n';
+            }
+        });
+        tags += '</select>';
+    });
+
+
+
+
+</script>
+</body>
+</html>
