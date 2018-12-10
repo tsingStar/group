@@ -15,7 +15,7 @@
                 分类：<span class="select-box" style="width: 200px;">
                         <select name="cate_id" class="input select">
                             <option value="">全部</option>
-                            <option value="0" {if isset($param['cate_id']) and 0==$param.cate_id}selected{/if}>未分类</option>
+                            <option value="0" {if isset($param['cate_id']) and '0'===$param.cate_id}selected{/if}>未分类</option>
                             {foreach $cate_list as $key=>$val}
                             <option value="{$key}" {if isset($param['cate_id']) and $key eq $param.cate_id}selected{/if}>{$val}</option>
                             {/foreach}

@@ -20,10 +20,11 @@
                 <tr class="text-c">
                     <th width="100">序号（正序）</th>
                     <th width="300">商品名称</th>
+                    <th width="150">规格</th>
                     <th width="300">商品标签</th>
-                    <th width="150">团限购</th>
-                    <th width="150">团员限购</th>
-                    <th width="150">每份数量</th>
+                    <th width="100">团限购</th>
+                    <th width="100">团员限购</th>
+                    <th width="100">每份数量</th>
                     <th width="150">进货价</th>
                     <th width="150">团购价</th>
                     <th width="150">市场价</th>
@@ -38,7 +39,6 @@
                 <tr class="text-c">
                     <input type="hidden" value="{$item.header_group_id}" class="group_id">
                     <input type="hidden" value="{$item.base_id}" class="base_id">
-                    <input type="hidden" value="{$item.attr}" class="attr">
                     <input type="hidden" value="{$item.unit}" class="unit">
                     <input type="hidden" value="{:round($item.purchase_price/$item.num, 2)}" class="purchase_price_one">
                     <input type="hidden" value="{$item.product_desc}" class="product_desc">
@@ -47,6 +47,9 @@
                     </td>
                     <td>
                         <input type="text" class="input input-text product_name" value="{$item.product_name}" disabled>
+                    </td>
+                    <td>
+                        <input type="text" class="input input-text attr" value="{$item.attr}" disabled>
                     </td>
                     <td>
                         <span class="select-box">
@@ -80,7 +83,7 @@
                         <input type="text" value="{$item.commission}" class="input input-text commission" disabled>
                     </td>
                     <td>
-                        <input type="text" value="{:round(($item.group_price-$item.purchase_price)/$item.group_price,2)*100}" class="input input-text coupon_commission" disabled>
+                        <input type="text" {if $item.purchase_price gt 0}value="{:round(($item.group_price-$item.purchase_price)/$item.group_price,2)*100}"{else/}value="0"{/if} class="input input-text coupon_commission" disabled>
                     </td>
                     <td>
                         <input type="text" value="{$item.remain}" class="input input-text remain" disabled>
@@ -229,7 +232,7 @@
     function savePro($products) {
         var _html = "";
         $.each($products, function (i, v) {
-            _html += '<tr class="text-c"><input type="hidden" value="'+group_id+'" class="group_id"><input type="hidden" value="'+v.base_id+'" class="base_id"><input type="hidden" value="'+v.attr+'" class="attr"><input type="hidden" value="'+v.unit+'" class="unit"><input type="hidden" value="'+v.purchase_price+'" class="purchase_price_one"><input type="hidden" value="'+v.product_desc+'" class="product_desc"><td><input type="text" class="input input-text ord" value="0"></td><td><input type="text" class="input input-text product_name" value="'+v.product_name+'"></td><td><span class="select-box">'+tags+'</span></td><td><input type="text" value="'+v.group_limit+'" class="input input-text group_limit"></td><td><input type="text" value="0" class="input input-text self_limit"></td><td><input type="text" value="1" class="input input-text num" oninput="changeNameAndPrice(this)"></td><td><input type="text" value="'+v.purchase_price+'" class="input input-text purchase_price" oninput="changePurchase(this)"></td><td><input type="text" value="0" class="input input-text group_price" oninput="computeRate(this)"></td><td><input type="text" value="'+v.market_price+'" class="input input-text market_price"></td><td><input type="text" value="0" class="input input-text commission"></td><td><input type="text" value="0" class="input input-text coupon_commission"></td><td><input type="text" value="'+v.remain+'" class="input input-text remain"></td><td><input type="text" value="0" class="input input-text sell_num"></td><td><input type="text" value="" onfocus="WdatePicker({startDate: \'%y-%M-%d HH:mm:ss\' ,dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" class="input input-text start_time Wdate"></td><td width="100"><a href="javascript:;" class="saveProduct" data-pid="0" onclick="saveProduct(this)" style="display:inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-save"></i>保存</a><a href="javascript:;" class="delProduct" onclick="delProduct(this)" style="display: inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-del"></i>删除</a><a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: none; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-edit"></i>编辑</a></td></tr>';
+            _html += '<tr class="text-c"><input type="hidden" value="'+group_id+'" class="group_id"><input type="hidden" value="'+v.base_id+'" class="base_id"><input type="hidden" value="'+v.unit+'" class="unit"><input type="hidden" value="'+v.purchase_price/v.num+'" class="purchase_price_one"><input type="hidden" value="'+v.product_desc+'" class="product_desc"><td><input type="text" class="input input-text ord" value="0"></td><td><input type="text" class="input input-text product_name" value="'+v.product_name+'"></td><td><input type="text" class="input input-text attr" value="'+v.attr+'"></td><td><span class="select-box">'+tags+'</span></td><td><input type="text" value="'+v.group_limit+'" class="input input-text group_limit"></td><td><input type="text" value="0" class="input input-text self_limit"></td><td><input type="text" value="'+v.num+'" class="input input-text num" oninput="changeNameAndPrice(this)"></td><td><input type="text" value="'+v.purchase_price+'" class="input input-text purchase_price" oninput="changePurchase(this)"></td><td><input type="text" value="'+v.group_price+'" class="input input-text group_price" oninput="computeRate(this)"></td><td><input type="text" value="'+v.market_price+'" class="input input-text market_price"></td><td><input type="text" value="'+v.commission+'" class="input input-text commission"></td><td><input type="text" value="'+v.coupon_commission+'" class="input input-text coupon_commission"></td><td><input type="text" value="'+v.remain+'" class="input input-text remain"></td><td><input type="text" value="0" class="input input-text sell_num"></td><td><input type="text" value="" onfocus="WdatePicker({startDate: \'%y-%M-%d HH:mm:ss\' ,dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" class="input input-text start_time Wdate"></td><td width="100"><a href="javascript:;" class="saveProduct" data-pid="0" onclick="saveProduct(this)" style="display:inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-save"></i>保存</a><a href="javascript:;" class="delProduct" onclick="delProduct(this)" style="display: inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-del"></i>删除</a><a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: none; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-edit"></i>编辑</a></td></tr>';
         });
         $("table").append(_html);
     }

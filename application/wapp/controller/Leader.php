@@ -177,6 +177,10 @@ class Leader extends Controller
             'pick_address' => input('pick_address'),
             'is_sec' => input('is_sec')
         ];
+        if($data["pick_type"] == 1 && !$data["pick_address"]){
+            $group = model("Group")->where("leader_id", $this->leader_id)->where("pick_type", 1)->order("create_time desc")->find();
+            $data["pick_address"] = $group["pick_address"];
+        }
         if (input('status') == 1) {
             $data['status'] = 1;
             $data['open_time'] = date('Y-m-d H:i');

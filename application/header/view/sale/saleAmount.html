@@ -21,6 +21,7 @@
             <table class="table table-border table-bordered table-bg table-hover table-sort">
                 <thead>
                     <tr class="text-c">
+                        <th width="100">军团id</th>
                         <th width="100">军团名称</th>
                         <th width="100">军团公告</th>
                         <th width="100">军团状态</th>
@@ -33,6 +34,9 @@
                 <tbody>
                 {foreach $list as $item}
                 <tr class="text-c va-m">
+                    <td>
+                        {$item.id}
+                    </td>
                     <td>
                         {$item.group_title}
                     </td>

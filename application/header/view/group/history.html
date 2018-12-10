@@ -18,7 +18,7 @@
                     <tbody>
                     {foreach $list as $item}
                     <tr class="{$item.id} text-c"
-                        data-product='{"base_id":{$item.id}, "product_name":"{$item.product_name}", "cate_id":"{$item.cate_id}", "product_desc":"{$item.desc}", "ord":0, "unit":"{$item.unit}", "num":1, "attr":"{$item.attr}", "self_limit":0, "group_limit":0, "purchase_price":"{$item.purchase_price}", "market_price":0,"group_price":0, "commission":0, "remain":-1}'>
+                        data-product='{"base_id":{$item.id}, "product_name":"{$item.product_name}", "cate_id":"{$item.cate_id}", "product_desc":"", "ord":0, "unit":"{$item.unit}", "num":"{$item.num}", "attr":"{$item.attr}", "self_limit":0, "group_limit":0, "purchase_price":"{$item.purchase_price}", "market_price":"{$item.market_price}","group_price":"{$item.group_price}", "commission":"{$item.commission}", "coupon_commission":"{if $item.purchase_price gt 0}{:round(($item.group_price-$item.purchase_price)/$item.group_price,2)*100}{else/}0{/if}", "remain":-1}'>
                         <td>
                             <input type="checkbox" class="checked-{$item.id}" onclick="checkIt(this)">
                         </td>
@@ -49,9 +49,9 @@
 
 {include file='pub/footer'/}
 <script type="text/javascript">
-    let posHeight=$('.pos-r').height();
-    $('.col-xs-6').css("height",posHeight-100+'px');
-    $('.col-xs-6').css("height",posHeight-100+'px');
+    // let posHeight=$('.pos-r').height();
+    // $('.col-xs-6').css("height",posHeight-100+'px');
+    // $('.col-xs-6').css("height",posHeight-100+'px');
     $("#history").dataTable({
         "aLengthMenu": [10],
         "bSort": false,
@@ -150,7 +150,7 @@
         var l = $(".checked-product").find(".product");
         $.each(l, function (i, v) {
                 product_arr.push($(v).data("product"));
-        })
+        });
         parent.savePro(product_arr);
         layer_close();
     }

@@ -1,0 +1,41 @@
+{include file="public@pub/header"/}
+</head>
+<body>
+
+<div class="page-container">
+    <form class="form form-horizontal" action="{:url('getOrderSaleDetail')}" method="post"
+          enctype="multipart/form-data">
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">开始时间：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input name="start_time" type="text" class="input-text" onfocus="date_h()" id="datemin1" required>
+            </div>
+        </div>
+        <div class="row cl">
+            <label class="form-label col-xs-4 col-sm-2">结束时间：</label>
+            <div class="formControls col-xs-8 col-sm-9">
+                <input name="end_time" type="text" class="input-text" onfocus="date_h1()" id="datemax1" required>
+            </div>
+        </div>
+        <div class="row cl">
+            <div class="col-xs-8 col-sm-9 col-xs-offset-4 col-sm-offset-2">
+                <button class="btn btn-secondary radius" type="submit"><i class="Hui-iconfont">&#xe632;</i> 下载
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+
+{include file="public@pub/footer"/}
+
+<script>
+    function date_h() {
+        WdatePicker({dateFmt:'yyyyMMdd000000',maxDate:'#F{ $dp.$D(datemax1)}'})
+    }
+    function date_h1() {
+        WdatePicker({dateFmt:'yyyyMMdd235959',minDate:'#F{ $dp.$D(datemin1)}'})
+    }
+</script>
+</body>
+</html>

@@ -455,7 +455,13 @@ class User extends Controller
             if($item["attr"] != ""){
                 $product_name .= $item["attr"]."*";
             }
-            $product_name .= $item["num"].$item["unit"]."/份";
+            $num = model("HeaderGroupProduct")->where("id", $item["id"])->value("num");
+//            $product_name .= $num.$item["unit"]."/份";
+            if($item["unit"] == "kg"){
+                $product_name .= ($num*1000)."克/份";
+            }else{
+                $product_name .= intval($num).$item["unit"]."/份";
+            }
             $temp["product_name"] = $product_name;
             $product_data[] = $temp;
         }

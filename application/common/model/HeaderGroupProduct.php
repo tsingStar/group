@@ -46,12 +46,13 @@ class HeaderGroupProduct extends Model
                 throw new Exception("商品限量不能小于当前售卖量");
             }
             $remain = $p["remain"];
+            $product["product_desc"] = \model("Product")->where("id", $product["base_id"])->value("desc");
             $res = $p->allowField(true)->save($product);
             if($res){
                 if($product["remain"]>=0){
                     if($remain == -1){
                         $redis->set($pid.":remain", 1);
-                        $remain = 0;
+                        $remain = $p["sell_num"];
                     }
                     $stock = $product["remain"]-$remain;
                     if($stock>0){
@@ -74,6 +75,7 @@ class HeaderGroupProduct extends Model
             }
         }else{
             $product['header_id'] = $header_id;
+            $product["product_desc"] = \model("Product")->where("id", $product["base_id"])->value("desc");
             $pro = model("HeaderGroupProduct")->where([
                 "header_group_id"=>$product["header_group_id"],
                 "base_id"=>$product["base_id"],
@@ -100,7 +102,7 @@ class HeaderGroupProduct extends Model
         }
         Cache::set($pid.":self_limit", $product["self_limit"]);
         Cache::set($pid.":group_limit", $product["group_limit"]);
-        Cache::set($pid.":start_time", strtotime($product["start_time"]));
+        Cache::set($pid.":start_time", strtotime(isset($product["start_time"]))?$product["start_time"]:"");
         return $pid;
     }
 

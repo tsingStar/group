@@ -693,11 +693,14 @@ class Header extends Controller
                 Log::error($refund_order);
                 $res = $weixin->refund($refund_order);
                 if ($res) {
+                    $refund->save(["status" => 1]);
                     //回调处理退款成功  需要完善
                     //军团退货商品处理
                     $header_product = model("HeaderGroupProduct")->where("id", $refund["header_product_id"])->find();
                     //团购
                     $group = model("Group")->where("id", $refund["group_id"])->find();
+                    //军团
+                    $header_group = model("HeaderGroup")->where("id", $group["header_group_id"])->find();
                     $group_product = model("GroupProduct")->where("id", $refund["product_id"])->find();
                     //订单商品详情
                     $product = model("OrderDet")->where("product_id", $refund["product_id"])->where("order_no", $refund["order_no"])->find();
@@ -716,7 +719,7 @@ class Header extends Controller
                         ]);
                     }
                     //商品库存处理
-                    model("HeaderGroupProduct")->where("id", $header_product["base_id"])->setInc("stock", $refund["num"]*$header_product["num"]);
+                    model("Product")->where("id", $header_product["base_id"])->setInc("stock", $refund["num"]*$header_product["num"]);
                     //团购商品处理
                     $group_product->save([
                         "refund_num" => $group_product["refund_num"] + $refund["num"],
@@ -738,7 +741,7 @@ class Header extends Controller
                     $header_money = model("HeaderMoneyLog");
                     $leader_money = model("LeaderMoneyLog");
                     //军团是否已结束
-                    if ($group["status"] == 2) {
+                    if ($group["status"] == 2 && $header_group["comp_status"] == 1) {
                         $header_money->save([
                             "header_id" => $refund["header_id"],
                             "type" => 2,
@@ -762,8 +765,6 @@ class Header extends Controller
                         }
                     }
 
-
-                    $refund->save(["status" => 1]);
                     exit_json();
                 } else {
                     exit_json(-1, "退款处理失败");

@@ -104,8 +104,8 @@ class Pub extends Controller
      */
     public function getOrderSaleDetail()
     {
-        $start = "20181001000000";
-        $end = "20181031235959";
+        $start = "20181101000000";
+        $end = "20181130235959";
         $order_det_list = model("OrderDet")->alias("a")->join("HeaderGroupProduct b", "a.header_product_id=b.id")->where("a.order_no", "egt", $start)->where("a.order_no", "elt", $end)->where("header_id", 1)->field("a.order_no,a.product_name,b.purchase_price, a.market_price,a.group_price,a.num,a.back_num,b.commission")->select();
         $order_list = model("Order")->where("order_no", "egt", $start)->where("order_no", "elt", $end)->where("header_id", 1)->field("order_no, order_money, refund_money")->select();
         $data = [];
