@@ -40,6 +40,7 @@ class Product extends ShopBase
         $this->assign("param", $param);
         $cate_list = model("Cate")->where("header_id", HEADER_ID)->column("cate_name", "id");
         $this->assign("cate_list", $cate_list);
+        $this->assign("totalNum", model("Product")->where("header_id", HEADER_ID)->count());
         return $this->fetch();
     }
 
@@ -246,8 +247,9 @@ class Product extends ShopBase
      */
     public function tagList()
     {
-        $list = model("ProductTag")->where("header_id", session(config("headerKey")))->select();
+        $list = model("ProductTag")->where("header_id", session(config("headerKey")))->paginate(10);
         $this->assign("list", $list);
+        $this->assign("totalNum", model("ProductTag")->where("header_id", session(config("headerKey")))->count());
         return $this->fetch();
     }
 
@@ -354,6 +356,7 @@ class Product extends ShopBase
     {
         $list = model("Cate")->where("header_id", HEADER_ID)->order("create_time desc")->paginate(10);
         $this->assign("list", $list);
+        $this->assign("totalNum", model("Cate")->where("header_id", HEADER_ID)->count());
         return $this->fetch();
     }
 
@@ -410,6 +413,7 @@ class Product extends ShopBase
     {
         $list = model("Unit")->where("header_id", HEADER_ID)->order("create_time desc")->paginate(10);
         $this->assign("list", $list);
+        $this->assign("totalNum", model("Unit")->where("header_id", HEADER_ID)->count());
         return $this->fetch();
     }
 

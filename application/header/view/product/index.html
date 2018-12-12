@@ -8,6 +8,7 @@
 </head>
 <body class="pos-r">
 <div>
+    <nav class="breadcrumb">{$breadNav} <a class="btn btn-success radius r btn-refresh" style="line-height:1.6em;margin-top:3px" href="javascript:location.replace(location.href);" title="刷新" ><i class="Hui-iconfont">&#xe68f;</i></a></nav>
     <div class="page-container">
         <div class="text-c">
             <form action="" method="get">
@@ -26,15 +27,12 @@
             </form>
         </div>
         <div class="cl pd-5 bg-1 bk-gray mt-20">
-            <span class="l mr-20">
+            <span class="l">
                 <a class="btn btn-primary radius" onclick="product_add('添加商品','{:url(\'Product/add\')}')" href="javascript:;">
                     <i class="Hui-iconfont">&#xe600;</i> 添加商品
                 </a>
             </span>
-            <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
-               href="javascript:location.replace(location.href);" title="刷新">
-                <i class="Hui-iconfont">&#xe68f;</i>
-            </a>
+            <span class="r">共有数据：<strong>{$totalNum}</strong> 条</span>
         </div>
         <div class="mt-20">
             <table class="table table-border table-bordered table-bg table-hover table-sort">

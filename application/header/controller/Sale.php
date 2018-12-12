@@ -29,6 +29,7 @@ class Sale extends ShopBase
         $list = $model->group("base_id")->order("sum(sell_num-refund_num) desc")->paginate(15);
         $this->assign("list", $list);
         $this->assign("param", $param);
+        $this->assign("totalNum", model("HeaderGroupProduct")->where("header_id", HEADER_ID)->group("base_id")->count());
         return $this->fetch();
     }
 

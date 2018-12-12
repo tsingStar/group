@@ -8,12 +8,15 @@
 
 namespace app\header\controller;
 
+use app\common\model\HeaderGroup;
 use think\Cache;
 use think\Log;
 use think\Request;
 
 class Index extends ShopBase
 {
+
+    private $assign;
 
     protected function _initialize()
     {
@@ -32,9 +35,9 @@ class Index extends ShopBase
     public function clearCache()
     {
         $res = Cache::clear();
-        if($res){
+        if ($res) {
             exit_json();
-        }else{
+        } else {
             exit_json(-1, "清空失败");
         }
 
@@ -83,6 +86,41 @@ class Index extends ShopBase
 
     public function welcome()
     {
+        //在售商品数量
+        $product_num = model("HeaderGroupProduct")->alias("a")->join("HeaderGroup b", "a.header_group_id=b.id")->where("b.status", 1)->where("b.header_id", HEADER_ID)->count();
+        $this->assign("product_num", $product_num);
+        $product_total = model("Product")->where("header_id", HEADER_ID)->count();
+        $this->assign("product_total", $product_total);
+
+        $order_total = model("Order")->where("header_id", HEADER_ID)->count();
+        $this->assign("order_total", $order_total);
+        $order_today = model("Order")->where("header_id", HEADER_ID)->where("create_time", "gt", strtotime(date("Y-m-d")))->where("create_time", "lt", strtotime(date("Y-m-d"))+24*60*60)->count();
+        $this->assign("order_today", $order_today);
+        $step = 24 * 60 * 60;
+        $list = model("Order")->where("header_id", 1)->where("create_time", "gt", time() - 29 * $step)->order("create_time")->select();
+        $order_num = [];
+        $order_money = [];
+        $day_arr = [];
+        for ($i = 0; $i < 30; $i++) {
+            $day = date("Y-m-d", time() - $step * $i);
+            $order_num[$day] = 0;
+            $order_money[$day] = 0;
+            $day_arr[] = $day;
+        }
+        sort($day_arr);
+        foreach ($list as $item) {
+            $temp_day = explode(" ", $item["create_time"])[0];
+            $order_num[$temp_day]++;
+            $order_money[$temp_day] = $order_money[$temp_day] + $item["order_money"] - $item["refund_money"];
+            $order_money[$temp_day] = round($order_money[$temp_day], 2);
+        }
+        ksort($order_num);
+        ksort($order_money);
+        $this->assign("day_arr", json_encode($day_arr));
+        $this->assign("order_num", json_encode(array_values($order_num)));
+        $this->assign("order_money", json_encode(array_values($order_money)));
+
+
         return $this->fetch();
     }
 
@@ -114,47 +152,47 @@ class Index extends ShopBase
                 foreach ($file as $item) {
                     $hash = $item->hash();
                     $r = model("Image")->where("header_id", HEADER_ID)->where("md5", $hash)->find();
-                    if(!$r){
-                        $info = $item->move(__UPLOAD__."/spread/");
+                    if (!$r) {
+                        $info = $item->move(__UPLOAD__ . "/spread/");
                         $saveName = $info->getSaveName();
 //                        $path = "https://www.ybt9.com/upload/spread/" . $saveName;
-                        $path = __URL__."/upload/spread/" . $saveName;
+                        $path = __URL__ . "/upload/spread/" . $saveName;
                         $file_url[] = [
-                            "image_url"=>$path,
-                            "header_id"=>HEADER_ID,
-                            "md5"=>$hash
+                            "image_url" => $path,
+                            "header_id" => HEADER_ID,
+                            "md5" => $hash
                         ];
                     }
                 }
-                if(count($file_url)>0){
+                if (count($file_url) > 0) {
                     $res = model("Image")->saveAll($file_url);
-                }else{
+                } else {
                     $res = true;
                 }
             } else {
                 $hash = $file->hash();
                 $r = model("Image")->where("header_id", HEADER_ID)->where("md5", $hash)->find();
-                if(!$r){
-                    $info = $file->move(__UPLOAD__."/spread/");
+                if (!$r) {
+                    $info = $file->move(__UPLOAD__ . "/spread/");
                     $saveName = $info->getSaveName();
 //                    $path = "https://www.ybt9.com/upload/spread/" . $saveName;
-                    $path = __URL__."/upload/spread/" . $saveName;
+                    $path = __URL__ . "/upload/spread/" . $saveName;
                     $result_url = [
-                        "image_url"=>$path,
-                        "header_id"=>HEADER_ID,
-                        "md5"=>$hash
+                        "image_url" => $path,
+                        "header_id" => HEADER_ID,
+                        "md5" => $hash
                     ];
                     $res = model("Image")->save($result_url);
-                }else{
+                } else {
                     $res = true;
                 }
             }
         } else {
             $res = false;
         }
-        if($res){
+        if ($res) {
             exit_json();
-        }else{
+        } else {
             exit_json(-1, "图片上传失败");
         }
     }
@@ -165,10 +203,10 @@ class Index extends ShopBase
     public function delImage()
     {
         $list = model("Image")->whereIn("image_url", input("idstr"))->select();
-        foreach ($list as $value){
+        foreach ($list as $value) {
             $path = str_replace("https://www.ybt9.com/upload", __UPLOAD__, $value["image_url"]);
 //            $path = str_replace("http://group.com/upload", __UPLOAD__, $value["image_url"]);
-            if(file_exists($path)){
+            if (file_exists($path)) {
                 @unlink($path);
             }
             $value->delete();

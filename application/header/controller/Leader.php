@@ -22,6 +22,7 @@ class Leader extends ShopBase
     public function index()
     {
         $list = model("User")->where("role_status", 2)->where("header_id", HEADER_ID)->paginate(10);
+        $this->assign("totalNum", model("User")->where("role_status", 2)->where("header_id", HEADER_ID)->count());
         $this->assign("list", $list);
         return $this->fetch();
         
@@ -34,6 +35,7 @@ class Leader extends ShopBase
     {
 
         $list = model('ApplyLeaderRecord')->where('header_id', HEADER_ID)->paginate(10);
+        $this->assign("totalNum", model("ApplyLeaderRecord")->where("header_id", HEADER_ID)->count());
         $this->assign('list', $list);
         return $this->fetch();
     }
@@ -45,7 +47,8 @@ class Leader extends ShopBase
     {
         $list = model("ApplyLeaderRecord")->where("header_id", HEADER_ID)->where("status", 0)->paginate(10);
         $this->assign("list", $list);
-        return $this->fetch("applylist");
+        $this->assign("totalNum", model("ApplyLeaderRecord")->where("status", 0)->where("header_id", HEADER_ID)->count());
+        return $this->fetch("applyList");
     }
 
     /**
@@ -56,6 +59,7 @@ class Leader extends ShopBase
         $leader_ids = model("User")->where("header_id", HEADER_ID)->column("id");
         $list = model("WithdrawLog")->alias("a")->join("User b", "a.user_id=b.id")->where("a.role", 2)->whereIn("a.user_id", $leader_ids)->field("a.*, b.name")->where("a.status", 1)->order("a.create_time desc")->paginate(10);
         $this->assign("list", $list);
+        $this->assign("totalNum", model("WithdrawLog")->alias("a")->join("User b", "a.user_id=b.id")->where("a.role", 2)->whereIn("a.user_id", $leader_ids)->field("a.*, b.name")->where("a.status", 1)->count());
         return $this->fetch();
     }
 

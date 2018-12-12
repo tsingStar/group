@@ -1,8 +1,109 @@
 {include file='pub/header'/}
+<style>
+
+</style>
 </head>
 <body>
-<div class="progress"><div class="progress-bar"><span class="sr-only" style="width:25%"></span>sg上的噶士大夫</div></div>
-
+<div class="container">
+    <div class="mr-20 mt-20">
+        <div class="col-12 cl">
+            <div class="l col-3 pd-20 text-c">
+                <div class="c-white radius" style="background-color: purple;">
+                    <div class="text-c mt-5">
+                        <i class="Hui-iconfont Hui-iconfont-shangjia" style="font-size: 20px"></i>
+                    </div>
+                    <h5>{$product_num}</h5>
+                    <h4>上架商品数量</h4>
+                </div>
+            </div>
+            <div class="l col-3 pd-20 text-c">
+                <div class="c-white radius" style="background-color: orange;">
+                    <div class="text-c mt-5">
+                        <i class="Hui-iconfont Hui-iconfont-ordered-list" style="font-size: 20px"></i>
+                    </div>
+                    <h5>{$product_total}</h5>
+                    <h4>平台商品数量</h4>
+                </div>
+            </div>
+            <div class="l col-3 pd-20 text-c">
+                <div class="c-white radius" style="background-color: blue;">
+                    <div class="text-c mt-5">
+                        <i class="Hui-iconfont Hui-iconfont-order" style="font-size: 20px"></i>
+                    </div>
+                    <h5>{$order_total}</h5>
+                    <h4>平台订单数量</h4>
+                </div>
+            </div>
+            <div class="l col-3 pd-20 text-c">
+                <div class="c-white radius" style="background-color: #1e347b;">
+                    <div class="text-c mt-5">
+                        <i class="Hui-iconfont Hui-iconfont-shujutongji" style="font-size: 20px"></i>
+                    </div>
+                    <h5>{$order_today}</h5>
+                    <h4>今日订单数量</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="charts" class="mr-20 mt-30">
+    </div>
+</div>
 {include file='pub/footer'/}
+<script type="text/javascript" src="__STATIC__/lib/echarts/3.4.0/echarts.common.min.js"></script>
+
+
+<script>
+
+    var whg = window.innerHeight;
+    var dhg = $(".container").find("div").eq(0).height();
+    $("#charts").css("height", (whg-dhg-100)+"px");
+    var option = {
+        title: {
+            text: '销售数据统计'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data:['日销售额','日订单总量']
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        toolbox: {
+            feature: {
+                saveAsImage: {}
+            }
+        },
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: {$day_arr}
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: [
+            {
+                name:'日销售额',
+                type:'line',
+                stack: '总量',
+                data:{$order_money}
+            },
+            {
+                name:'日订单总量',
+                type:'line',
+                stack: '总量',
+                data:{$order_num}
+            }
+        ]
+    };
+    echarts.init(document.getElementById("charts")).setOption(option);
+</script>
+
+
 </body>
 </html>

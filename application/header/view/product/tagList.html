@@ -3,6 +3,12 @@
 </head>
 <body class="pos-r">
 <div>
+    <nav class="breadcrumb">
+        {$breadNav}
+        <a class="btn btn-success radius r btn-refresh" style="line-height:1.6em;margin-top:3px" href="javascript:location.replace(location.href);" title="刷新" >
+            <i class="Hui-iconfont">&#xe68f;</i>
+        </a>
+    </nav>
     <div class="page-container">
         <div class="cl pd-5 bg-1 bk-gray mt-20">
             <span class="l">
@@ -10,10 +16,7 @@
                     <i class="Hui-iconfont">&#xe600;</i> 添加标签
                 </a>
             </span>
-            <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px"
-               href="javascript:location.replace(location.href);" title="刷新">
-                <i class="Hui-iconfont">&#xe68f;</i>
-            </a>
+            <span class="r">总共有数据：<strong>{$totalNum}</strong>条</span>
         </div>
         <div class="mt-20">
             <table class="table table-border table-bordered table-bg table-hover table-sort">
@@ -46,13 +49,14 @@
                 {/foreach}
                 </tbody>
             </table>
+            {$list->render()}
         </div>
     </div>
 </div>
 
 {include file='pub/footer'/}
 <script type="text/javascript">
-    $('.table-sort').dataTable();
+    // $('.table-sort').dataTable();
 
     /*产品-添加*/
     function tag_add(title, url) {
