@@ -336,12 +336,17 @@ class Group extends ShopBase
      */
     public function delProduct()
     {
-        $pid = input("id");
-        $pro = model("HeaderGroupProduct")->where("id", $pid)->delete();
-        if ($pro) {
-            exit_json();
-        } else {
-            exit_json(-1, "操作失败");
+        $pid = input("pid");
+        $pro = model("HeaderGroupProduct")->where("id", $pid)->find();
+        if($pro["sell_num"]>0){
+            exit_json(-1, "商品已售出，不可删除");
+        }else{
+            $res = $pro->delete();
+            if($res){
+                exit_json();
+            }else{
+                exit_json(-1, "删除失败");
+            }
         }
     }
 

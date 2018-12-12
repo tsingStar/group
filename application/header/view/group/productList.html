@@ -101,6 +101,7 @@
                         <a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: inline-block; text-decoration: none;">
                             <i class="Hui-iconfont Hui-iconfont-edit"></i>编辑
                         </a>
+                        <a href="javascript:;" class="delProduct" data-pid="{$item.id}" onclick="delProduct(this)" style="display: inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-del"></i>删除</a>
                     </td>
                 </tr>
                 {/foreach}
@@ -116,9 +117,19 @@
      * 删除单个商品
      */
     function delProduct(o){
+        var pid = $(o).data("pid");
         layer.confirm("确定删除此商品？", function (index) {
             layer.close(index);
-            $(o).parents("tr").remove();
+            if(pid != 0){
+                $.post("{:url('delProduct')}", {pid:pid}, function(res){
+                    if(res.code == 1){
+                        $(o).parents("tr").remove();
+                    }
+                    layer.msg(res.msg);
+                });
+            }else{
+                $(o).parents("tr").remove();
+            }
         });
     }
 
@@ -174,7 +185,8 @@
      */
     function editProduct(o){
         o.style.display = "none";
-        $(o).prev()[0].style.display = "inline-block";
+        // $(o).prev()[0].style.display = "inline-block";
+        $(o).parent().find(".saveProduct").css("display", "inline-block");
         $(o).parents("tr").find(":disabled").removeAttr("disabled");
     }
 
@@ -217,7 +229,7 @@
             if(res.code == 1){
                 o.style.display = "none";
                 if(pid == 0){
-                    $(o).parent().find(".delProduct").remove();
+                    $(o).parent().find(".delProduct").data("pid", res.data);
                     $(o).data("pid", res.data);
                 }
                 $(o).parent().find(".editProduct").css("display", "inline-block");
@@ -232,7 +244,7 @@
     function savePro($products) {
         var _html = "";
         $.each($products, function (i, v) {
-            _html += '<tr class="text-c"><input type="hidden" value="'+group_id+'" class="group_id"><input type="hidden" value="'+v.base_id+'" class="base_id"><input type="hidden" value="'+v.unit+'" class="unit"><input type="hidden" value="'+v.purchase_price/v.num+'" class="purchase_price_one"><input type="hidden" value="'+v.product_desc+'" class="product_desc"><td><input type="text" class="input input-text ord" value="0"></td><td><input type="text" class="input input-text product_name" value="'+v.product_name+'"></td><td><input type="text" class="input input-text attr" value="'+v.attr+'"></td><td><span class="select-box">'+tags+'</span></td><td><input type="text" value="'+v.group_limit+'" class="input input-text group_limit"></td><td><input type="text" value="0" class="input input-text self_limit"></td><td><input type="text" value="'+v.num+'" class="input input-text num" oninput="changeNameAndPrice(this)"></td><td><input type="text" value="'+v.purchase_price+'" class="input input-text purchase_price" oninput="changePurchase(this)"></td><td><input type="text" value="'+v.group_price+'" class="input input-text group_price" oninput="computeRate(this)"></td><td><input type="text" value="'+v.market_price+'" class="input input-text market_price"></td><td><input type="text" value="'+v.commission+'" class="input input-text commission"></td><td><input type="text" value="'+v.coupon_commission+'" class="input input-text coupon_commission"></td><td><input type="text" value="'+v.remain+'" class="input input-text remain"></td><td><input type="text" value="0" class="input input-text sell_num"></td><td><input type="text" value="" onfocus="WdatePicker({startDate: \'%y-%M-%d HH:mm:ss\' ,dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" class="input input-text start_time Wdate"></td><td width="100"><a href="javascript:;" class="saveProduct" data-pid="0" onclick="saveProduct(this)" style="display:inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-save"></i>保存</a><a href="javascript:;" class="delProduct" onclick="delProduct(this)" style="display: inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-del"></i>删除</a><a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: none; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-edit"></i>编辑</a></td></tr>';
+            _html += '<tr class="text-c"><input type="hidden" value="'+group_id+'" class="group_id"><input type="hidden" value="'+v.base_id+'" class="base_id"><input type="hidden" value="'+v.unit+'" class="unit"><input type="hidden" value="'+v.purchase_price/v.num+'" class="purchase_price_one"><input type="hidden" value="'+v.product_desc+'" class="product_desc"><td><input type="text" class="input input-text ord" value="0"></td><td><input type="text" class="input input-text product_name" value="'+v.product_name+'"></td><td><input type="text" class="input input-text attr" value="'+v.attr+'"></td><td><span class="select-box">'+tags+'</span></td><td><input type="text" value="'+v.group_limit+'" class="input input-text group_limit"></td><td><input type="text" value="0" class="input input-text self_limit"></td><td><input type="text" value="'+v.num+'" class="input input-text num" oninput="changeNameAndPrice(this)"></td><td><input type="text" value="'+v.purchase_price+'" class="input input-text purchase_price" oninput="changePurchase(this)"></td><td><input type="text" value="'+v.group_price+'" class="input input-text group_price" oninput="computeRate(this)"></td><td><input type="text" value="'+v.market_price+'" class="input input-text market_price"></td><td><input type="text" value="'+v.commission+'" class="input input-text commission"></td><td><input type="text" value="'+v.coupon_commission+'" class="input input-text coupon_commission"></td><td><input type="text" value="'+v.remain+'" class="input input-text remain"></td><td><input type="text" value="0" class="input input-text sell_num"></td><td><input type="text" value="" onfocus="WdatePicker({startDate: \'%y-%M-%d HH:mm:ss\' ,dateFmt:\'yyyy-MM-dd HH:mm:ss\'})" class="input input-text start_time Wdate"></td><td width="100"><a href="javascript:;" class="editProduct" onclick="editProduct(this)" style="display: none; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-edit"></i>编辑</a><a href="javascript:;" class="saveProduct" data-pid="0" onclick="saveProduct(this)" style="display:inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-save"></i>保存</a><a href="javascript:;" class="delProduct" data-pid="0" onclick="delProduct(this)" style="display: inline-block; text-decoration: none;"><i class="Hui-iconfont Hui-iconfont-del"></i>删除</a></td></tr>';
         });
         $("table").append(_html);
     }

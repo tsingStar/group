@@ -97,7 +97,7 @@ class Index extends ShopBase
         $order_today = model("Order")->where("header_id", HEADER_ID)->where("create_time", "gt", strtotime(date("Y-m-d")))->where("create_time", "lt", strtotime(date("Y-m-d"))+24*60*60)->count();
         $this->assign("order_today", $order_today);
         $step = 24 * 60 * 60;
-        $list = model("Order")->where("header_id", 1)->where("create_time", "gt", time() - 29 * $step)->order("create_time")->select();
+        $list = model("Order")->where("header_id", HEADER_ID)->where("create_time", "gt", time() - 29 * $step)->order("create_time")->select();
         $order_num = [];
         $order_money = [];
         $day_arr = [];
